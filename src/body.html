@@ -1,0 +1,35 @@
+<div class="app" id="app">
+  <header class="top">
+    <div class="brand">
+      <span class="brand-name">ПЛАНИРОВЩИК</span>
+      <span class="brand-sub" id="brandSub">Накопительный счёт 2026–2031</span>
+    </div>
+    <button class="btn btn-primary" id="btnUpload" type="button" aria-label="Загрузить файл Excel">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M5 20h14"/></svg>
+      <span>Файл</span>
+    </button>
+    <input type="file" id="fileInput" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+  </header>
+  <main id="main" aria-live="polite"></main>
+  <nav class="tabbar" aria-label="Разделы">
+    <div class="tabbar-in" role="tablist">
+      <button class="tab" role="tab" id="tab-obzor" data-tab="obzor" aria-selected="true" type="button">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7.5" height="9" rx="2"/><rect x="13.5" y="3" width="7.5" height="5" rx="2"/><rect x="13.5" y="11" width="7.5" height="10" rx="2"/><rect x="3" y="15" width="7.5" height="6" rx="2"/></svg></span>
+        Обзор
+      </button>
+      <button class="tab" role="tab" id="tab-mesyac" data-tab="mesyac" aria-selected="false" type="button">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16.5" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/><path d="M7.5 14h2M11 14h2M14.5 14h2M7.5 17.5h2M11 17.5h2"/></svg></span>
+        Месяц
+      </button>
+      <button class="tab" role="tab" id="tab-kategorii" data-tab="kategorii" aria-selected="false" type="button">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg></span>
+        Категории
+      </button>
+      <button class="tab" role="tab" id="tab-nakopleniya" data-tab="nakopleniya" aria-selected="false" type="button">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M4 16l5-5 4 3 7-8"/><path d="M15 6h5v5"/></svg></span>
+        Накопления
+      </button>
+    </div>
+  </nav>
+</div>
+
