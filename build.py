@@ -51,5 +51,5 @@ for name, size, pad in [("icon-192.png", 192, 26), ("icon-512.png", 512, 70), ("
 mf = root / "docs" / "manifest.webmanifest"
 mf.write_text(mf.read_text(encoding="utf-8").replace("#090e18", "#1c1b19").replace("#1f3864", "#f5f4ed"), encoding="utf-8")
 sw = root / "docs" / "sw.js"
-sw.write_text(re.sub(r"planner-[\d.]+", "planner-1.2.0", sw.read_text(encoding="utf-8"), count=1), encoding="utf-8")
+sw.write_text(re.sub(r"planner-[\d.]+", "planner-1.3.0", sw.read_text(encoding="utf-8"), count=1), encoding="utf-8")
 print("icons, manifest, sw updated")

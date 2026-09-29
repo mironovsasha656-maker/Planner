@@ -679,3 +679,54 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
 
+
+
+/* ================= v1.3: theme, CSV, swipe, ripple, haptics ================= */
+const THEME_KEY = 'planner-theme', THEMES = ['auto', 'light', 'dark'], THEME_RU = { auto: 'авто', light: 'светлая', dark: 'тёмная' };
+function applyTheme(t) {
+  const root = document.documentElement;
+  if (t === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', t);
+  const dark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.setAttribute('content', dark ? '#1c1b19' : '#f5f4ed'));
+  const btn = $('#btnTheme'); if (btn) btn.setAttribute('aria-label', 'Тема: ' + THEME_RU[t]);
+}
+function buzz(ms = 8) { try { navigator.vibrate && navigator.vibrate(ms); } catch {} }
+function exportCsv() {
+  if (!state.model) return;
+  const m = curMonth(), q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const head = ['Дата', 'Всего', 'Из лимита', 'Доход', ...m.catNames];
+  const rows = m.days.map(d => [d.date, d.all ?? '', d.limit ?? '', d.income ?? '', ...m.catNames.map((_, k) => (d.cats && d.cats[k]) || '')]);
+  const csv = '\ufeff' + [head, ...rows].map(r => r.map(q).join(';')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `planner-${m.key}.csv`; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast(`Сохранён CSV: ${m.name}`);
+}
+function initExtras() {
+  let theme = store.get(THEME_KEY); if (!THEMES.includes(theme)) theme = 'auto';
+  applyTheme(theme);
+  $('#btnTheme').addEventListener('click', () => { theme = THEMES[(THEMES.indexOf(theme) + 1) % 3]; store.set(THEME_KEY, theme); applyTheme(theme); toast('Тема: ' + THEME_RU[theme]); buzz(); });
+  $('#btnCsv').addEventListener('click', () => { exportCsv(); buzz(); });
+  // ripple + haptics
+  document.addEventListener('pointerdown', e => {
+    const el = e.target.closest('.btn, .tab, .day-row, .chip'); if (!el) return;
+    buzz(6);
+    if (REDUCED() || el.classList.contains('tab')) return;
+    const r = el.getBoundingClientRect(), s = Math.max(r.width, r.height) * 2, dot = document.createElement('span');
+    dot.className = 'ripple'; dot.style.cssText = `width:${s}px;height:${s}px;left:${e.clientX - r.left - s / 2}px;top:${e.clientY - r.top - s / 2}px`;
+    el.appendChild(dot); setTimeout(() => dot.remove(), 600);
+  }, { passive: true });
+  // swipe between tabs
+  const order = Object.keys(SCREENS); let sx, sy, st0;
+  document.addEventListener('touchstart', e => { const t = e.touches[0]; sx = t.clientX; sy = t.clientY; st0 = e.target.closest('svg, input, .tabbar') ? null : Date.now(); }, { passive: true });
+  document.addEventListener('touchend', e => {
+    if (!st0 || !state.model || Date.now() - st0 > 600) return;
+    const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+    if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 2) return;
+    const i = order.indexOf(state.tab), j = i + (dx < 0 ? 1 : -1);
+    if (j < 0 || j >= order.length) return;
+    state.tab = order[j]; saveUI(); render(true, dx < 0 ? 1 : -1); window.scrollTo(0, 0); buzz(10);
+  }, { passive: true });
+}
+initExtras();
