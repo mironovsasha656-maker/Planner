@@ -294,3 +294,15 @@ main { padding: 4px 16px calc(var(--tabbar-h) + 28px + env(safe-area-inset-botto
   #main.enter > *, #main.enter .tile, #main.enter .cat-row, #main.enter .day-row, #main.enter .kv-row, #main.enter .ms-row,
   #main.enter svg .bar, #main.enter svg .ln-draw, #main.enter svg .dot-pop, #main.enter svg .fade, .hero::after, .tab.pop .ic svg { animation-duration: .001ms !important; animation-delay: 0s !important; }
 }
+
+/* ---------- v1.3 extras ---------- */
+.btn-ghost { background: transparent; border-color: var(--line); color: var(--ink-2); }
+.top { gap: 8px; }
+.btn, .tab, .day-row, .chip { position: relative; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+.tab { overflow: visible; }
+.ripple { position: absolute; border-radius: 50%; pointer-events: none; background: currentColor; opacity: .22; transform: scale(0); animation: rip .55s ease-out forwards; }
+@keyframes rip { to { transform: scale(1); opacity: 0; } }
+.btn:active, .day-row:active, .tile:active { transform: scale(.98); transition: transform .08s; }
+.tab[aria-selected="true"] .ic { box-shadow: 0 0 0 4px color-mix(in srgb, var(--navy) 8%, transparent); }
+.top { backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px); background: color-mix(in srgb, var(--bg) 85%, transparent); }
+@media (prefers-reduced-motion: reduce) { .ripple { display: none; } }
