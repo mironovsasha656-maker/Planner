@@ -4,32 +4,32 @@ img { max-width: 100%; }
 /* Layout: one-column phone app shell — sticky header, scrolling screen, fixed bottom tab bar.
    Palette: treasury navy from the Excel planner + ledger-gold highlight; semantic green/red only for limit status. */
 :root {
-  --bg: #edf0f5;
-  --surface: #ffffff;
-  --surface-2: #f5f7fb;
-  --ink: #0e1a2f;
-  --ink-2: #45526b;
-  --muted: #76829a;
-  --line: #dde3ee;
-  --navy: #1f3864;
-  --accent: #2856c8;
-  --gold: #b27a00;
-  --gold-soft: #fff3cf;
-  --good: #1a7f46;
-  --good-soft: #e1f3e8;
-  --bad: #c83a31;
-  --bad-soft: #fbe6e4;
-  --out: #a9b5cc;
-  --hero-bg: #1f3864;
-  --hero-ink: #ffffff;
-  --hero-ink-2: #b6c3e0;
+  --bg: #f5f4ed;
+  --surface: #fdfcf8;
+  --surface-2: #efede4;
+  --ink: #1f1e1d;
+  --ink-2: #524f49;
+  --muted: #7d786e;
+  --line: #e2dfd3;
+  --navy: #b85432;
+  --accent: #b85432;
+  --gold: #8a6410;
+  --gold-soft: #f7ecc9;
+  --good: #3f7d52;
+  --good-soft: #e2f0e4;
+  --bad: #c04a44;
+  --bad-soft: #f8e4e0;
+  --out: #b9b2a2;
+  --hero-bg: #2b2926;
+  --hero-ink: #fdfcf8;
+  --hero-ink-2: #c9c2b3;
   --hero-track: rgba(255,255,255,.16);
-  --shadow: 0 1px 2px rgba(14,26,47,.06), 0 4px 16px rgba(14,26,47,.05);
+  --shadow: 0 1px 2px rgba(60,40,20,.06), 0 4px 16px rgba(60,40,20,.05);
   /* categorical, fixed order (validated reference ramp) + neutral for «Прочее» */
-  --c1: #2a78d6; --c2: #eb6834; --c3: #1baf7a; --c4: #eda100;
-  --c5: #e87ba4; --c6: #4a3aa7; --c7: #b5651d; --c8: #1fa3c4; --c9: #8d96a8;
+  --c1: #b85432; --c2: #e3b04b; --c3: #7b5e4a; --c4: #4a8c5e;
+  --c5: #c9788f; --c6: #6a5aa8; --c7: #d98b3a; --c8: #4a93a8; --c9: #9a9384;
 
-  --f-display: "Unbounded", "Golos Text", system-ui, sans-serif;
+  --f-display: "Source Serif 4", Georgia, "Golos Text", system-ui, sans-serif;
   --f-body: "Golos Text", "Roboto", "SamsungOne", system-ui, -apple-system, "Segoe UI", sans-serif;
   --r-card: 18px;
   --r-chip: 999px;
@@ -38,24 +38,16 @@ img { max-width: 100%; }
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #090e18; --surface: #111a2a; --surface-2: #172236; --ink: #edf1f8; --ink-2: #a9b4c9; --muted: #7a869d;
-    --line: #243049; --navy: #9db6f3; --accent: #86a8ff; --gold: #e3aa2e; --gold-soft: #3a2e10;
-    --good: #43c27f; --good-soft: #12301f; --bad: #f2716a; --bad-soft: #3a1714; --out: #4c5a78;
-    --on-navy: #0b1426; --hero-bg: #16284d; --hero-ink: #ffffff; --hero-ink-2: #a9badf; --hero-track: rgba(255,255,255,.14);
-    --shadow: none;
-    --c1: #3987e5; --c2: #d95926; --c3: #199e70; --c4: #c98500;
-    --c5: #d55181; --c6: #9085e9; --c7: #b86a2e; --c8: #1f93b3; --c9: #7b8498;
+    --bg: #1c1b19; --surface: #262523; --surface-2: #2f2d2a; --ink: #f0eee6; --ink-2: #b9b5a9; --muted: #8c877b; --line: #3a3835; --navy: #e08865; --accent: #e08865; --gold: #e3b04b; --gold-soft: #3d3117; --good: #6cbf86; --good-soft: #1f3326; --bad: #f0857e; --bad-soft: #3d211e; --out: #5a564e; --hero-bg: #3a2b23; --hero-ink: #fdfcf8; --hero-ink-2: #d9c3b6; --on-navy: #1c1b19; 
+    --hero-track: rgba(255,255,255,.14); --shadow: none;
+    --c1: #e08865; --c2: #e3b04b; --c3: #a58469; --c4: #6cbf86; --c5: #d98aa0; --c6: #a597e0; --c7: #e59a4d; --c8: #6cb4c8; --c9: #8c877b;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #090e18; --surface: #111a2a; --surface-2: #172236; --ink: #edf1f8; --ink-2: #a9b4c9; --muted: #7a869d;
-  --line: #243049; --navy: #9db6f3; --accent: #86a8ff; --gold: #e3aa2e; --gold-soft: #3a2e10;
-  --good: #43c27f; --good-soft: #12301f; --bad: #f2716a; --bad-soft: #3a1714; --out: #4c5a78;
-  --on-navy: #0b1426; --hero-bg: #16284d; --hero-ink: #ffffff; --hero-ink-2: #a9badf; --hero-track: rgba(255,255,255,.14);
-  --shadow: none;
-  --c1: #3987e5; --c2: #d95926; --c3: #199e70; --c4: #c98500;
-  --c5: #d55181; --c6: #9085e9; --c7: #b86a2e; --c8: #1f93b3; --c9: #7b8498;
+  --bg: #1c1b19; --surface: #262523; --surface-2: #2f2d2a; --ink: #f0eee6; --ink-2: #b9b5a9; --muted: #8c877b; --line: #3a3835; --navy: #e08865; --accent: #e08865; --gold: #e3b04b; --gold-soft: #3d3117; --good: #6cbf86; --good-soft: #1f3326; --bad: #f0857e; --bad-soft: #3d211e; --out: #5a564e; --hero-bg: #3a2b23; --hero-ink: #fdfcf8; --hero-ink-2: #d9c3b6; --on-navy: #1c1b19; 
+  --hero-track: rgba(255,255,255,.14); --shadow: none;
+  --c1: #e08865; --c2: #e3b04b; --c3: #a58469; --c4: #6cbf86; --c5: #d98aa0; --c6: #a597e0; --c7: #e59a4d; --c8: #6cb4c8; --c9: #8c877b;
   color-scheme: dark;
 }
 
@@ -274,3 +266,31 @@ main { padding: 4px 16px calc(var(--tabbar-h) + 28px + env(safe-area-inset-botto
 .row { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .stack { display: flex; flex-direction: column; gap: 14px; }
 
+
+/* ---------- v1.2 motion ---------- */
+.hero-v, .tile-v, .screen-title, .kv-row .v { font-family: var(--f-display); }
+.hero::after { animation: drift 8s ease-in-out infinite alternate; }
+@keyframes drift { from { transform: translate(0,0) scale(1); } to { transform: translate(-10px,8px) scale(1.06); } }
+@keyframes riseIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes slideNext { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes slidePrev { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+@keyframes rowIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes growY { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes drawLine { to { stroke-dashoffset: 0; } }
+@keyframes popIn { 0% { opacity: 0; transform: scale(0); } 70% { opacity: 1; transform: scale(1.3); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes fadeFrom { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tabPop { 0% { transform: scale(1); } 40% { transform: scale(1.28); } 100% { transform: scale(1); } }
+#main.enter > * { animation: riseIn .7s cubic-bezier(.2,.7,.2,1) both; animation-delay: calc(min(var(--n, 0), 8) * 55ms); }
+#main.enter.dir-next > * { animation-name: slideNext; animation-duration: .5s; }
+#main.enter.dir-prev > * { animation-name: slidePrev; animation-duration: .5s; }
+#main.enter .tile, #main.enter .cat-row, #main.enter .day-row, #main.enter .kv-row, #main.enter .ms-row {
+  animation: rowIn .6s cubic-bezier(.2,.7,.2,1) both; animation-delay: calc(min(var(--n, 0), 8) * 55ms + 120ms); }
+#main.enter svg .bar { transform-box: fill-box; transform-origin: 50% 100%; animation: growY .8s cubic-bezier(.2,.7,.2,1) both; animation-delay: calc(var(--i, 0) * 70ms + 180ms); }
+#main.enter svg .ln-draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: drawLine 1.1s ease-out .18s forwards; }
+#main.enter svg .dot-pop { transform-box: fill-box; transform-origin: center; animation: popIn .5s cubic-bezier(.34,1.56,.64,1) 1.05s both; }
+#main.enter svg .fade { animation: fadeFrom .8s ease both; animation-delay: calc(var(--i, 0) * 70ms + 300ms); }
+.tab.pop .ic svg { animation: tabPop .4s cubic-bezier(.34,1.56,.64,1); }
+@media (prefers-reduced-motion: reduce) {
+  #main.enter > *, #main.enter .tile, #main.enter .cat-row, #main.enter .day-row, #main.enter .kv-row, #main.enter .ms-row,
+  #main.enter svg .bar, #main.enter svg .ln-draw, #main.enter svg .dot-pop, #main.enter svg .fade, .hero::after, .tab.pop .ic svg { animation-duration: .001ms !important; animation-delay: 0s !important; }
+}

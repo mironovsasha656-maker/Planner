@@ -537,13 +537,62 @@ const SCREENS = {
   obzor: [screenObzor, afterObzor], mesyac: [screenMesyac, afterMesyac],
   kategorii: [screenKategorii, afterKategorii], nakopleniya: [screenNakopleniya, afterNakopleniya],
 };
-function render() {
+let enterTimer, countRaf = [];
+const REDUCED = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+function clearEnter(main) {
+  clearTimeout(enterTimer);
+  countRaf.forEach(cancelAnimationFrame); countRaf = [];
+  main.classList.remove('enter', 'dir-next', 'dir-prev');
+}
+/* stagger: --n on top-level blocks and rows; chart marks get --i and animation hooks */
+function stagger(main) {
+  [...main.children].forEach((el, i) => el.style.setProperty('--n', i));
+  main.querySelectorAll('.tile, .cat-row, .day-row, .kv-row, .ms-row').forEach((el, i) => el.style.setProperty('--n', i % 9));
+  main.querySelectorAll('svg').forEach(svg => {
+    let bi = 0, fi = 0;
+    svg.querySelectorAll('rect[style*="fill:var"], path[style*="fill:var"]:not([opacity])').forEach(el => {
+      if (el.closest('.tip') || /fill:var\(--(surface|line)\)/.test(el.getAttribute('style') || '')) return;
+      el.classList.add('bar'); el.style.setProperty('--i', bi++);
+    });
+    svg.querySelectorAll('path[fill="none"][stroke-width]').forEach(el => { el.setAttribute('pathLength', '1'); el.classList.add('ln-draw'); });
+    svg.querySelectorAll('circle[r]').forEach(el => el.classList.add('dot-pop'));
+    svg.querySelectorAll('text').forEach(el => { if (el.getAttribute('text-anchor') === 'middle' && el.getAttribute('font-weight')) { el.classList.add('fade'); el.style.setProperty('--i', fi++); } });
+  });
+}
+/* count-up for pure numbers ("12 345 ₽", "+1 200"); text with dates/words is left alone */
+function countUp(main) {
+  main.querySelectorAll('.hero-v, .tile-v, .kv-row .v').forEach(el => {
+    const node = [...el.childNodes].find(n => n.nodeType === 3 && /\d/.test(n.nodeValue));
+    if (!node) return;
+    const m = node.nodeValue.match(/^([^\d]{0,2})(\d[\d\s\u00a0]*\d|\d)([\s\u00a0]*[^\d\s]{0,3})?$/);
+    if (!m) return;
+    const end = parseInt(m[2].replace(/[\s\u00a0]/g, ''), 10);
+    if (!(end > 0) || end > 1e12) return;
+    const text = node.nodeValue, t0 = performance.now(), dur = 900;
+    const step = now => {
+      const p = Math.min((now - t0) / dur, 1);
+      const e = p < .5 ? 4 * p ** 3 : 1 - (-2 * p + 2) ** 3 / 2;
+      node.nodeValue = p >= 1 ? text : m[1] + nf0.format(Math.round(end * e)) + (m[3] || '');
+      if (p < 1) countRaf.push(requestAnimationFrame(step));
+    };
+    countRaf.push(requestAnimationFrame(step));
+  });
+}
+function render(anim = false, dir = 0) {
   const main = $('#main');
+  clearEnter(main);
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === state.tab)));
-  if (!state.model) { main.innerHTML = welcome(); return; }
+  if (!state.model) { main.innerHTML = welcome(); if (anim && !REDUCED()) { stagger(main); main.classList.add('enter'); enterTimer = setTimeout(() => main.classList.remove('enter'), 2200); } return; }
   const [scr, after] = SCREENS[state.tab];
   main.innerHTML = scr();
   after();
+  if (anim && !REDUCED()) {
+    stagger(main);
+    main.classList.add('enter');
+    if (dir < 0) main.classList.add('dir-prev'); else if (dir > 0) main.classList.add('dir-next');
+    countUp(main);
+    enterTimer = setTimeout(() => main.classList.remove('enter', 'dir-next', 'dir-prev'), 2200);
+  }
   const sub = $('#brandSub');
   if (sub) sub.textContent = state.model.demo ? 'Пример данных' : (state.model.fileName || 'Накопительный счёт 2026–2031');
 }
@@ -572,7 +621,7 @@ function setModel(model, fromFile) {
     const last = withData.length ? monthStats(withData[withData.length - 1], model.settings).lastDate : null;
     toast(ok ? `Загружено. Данные по ${last ? dayLong(last) : '—'}.` : 'Загружено, но память браузера недоступна: после закрытия файл придётся загрузить снова.');
   }
-  render();
+  render(true);
 }
 
 async function handleFile(file) {
@@ -603,7 +652,8 @@ function init() {
   $('#fileInput').addEventListener('change', e => { handleFile(e.target.files[0]); e.target.value = ''; });
   document.querySelector('.tabbar').addEventListener('click', e => {
     const b = e.target.closest('.tab'); if (!b) return;
-    state.tab = b.dataset.tab; saveUI(); render(); window.scrollTo(0, 0);
+    state.tab = b.dataset.tab; saveUI(); render(true); window.scrollTo(0, 0);
+    b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
   });
   $('#main').addEventListener('click', e => {
     const a = e.target.closest('[data-act],[data-day],[data-cat],[data-mode]');
@@ -612,9 +662,9 @@ function init() {
     const i = ms.findIndex(m => m.key === state.monthKey);
     if (a.dataset.act === 'upload') $('#fileInput').click();
     else if (a.dataset.act === 'demo') setModel(demoModel(), false);
-    else if (a.dataset.act === 'mprev' && i > 0) { state.monthKey = ms[i - 1].key; state.openDay = null; render(); }
-    else if (a.dataset.act === 'mnext' && i < ms.length - 1) { state.monthKey = ms[i + 1].key; state.openDay = null; render(); }
-    else if (a.dataset.act === 'tab') { state.tab = a.dataset.tab; saveUI(); render(); window.scrollTo(0, 0); }
+    else if (a.dataset.act === 'mprev' && i > 0) { state.monthKey = ms[i - 1].key; state.openDay = null; render(true, -1); }
+    else if (a.dataset.act === 'mnext' && i < ms.length - 1) { state.monthKey = ms[i + 1].key; state.openDay = null; render(true, 1); }
+    else if (a.dataset.act === 'tab') { state.tab = a.dataset.tab; saveUI(); render(true); window.scrollTo(0, 0); }
     else if (a.dataset.day) { state.openDay = state.openDay === a.dataset.day ? null : a.dataset.day; const y = window.scrollY; render(); window.scrollTo(0, y); }
     else if (a.dataset.cat) { state.catOff[a.dataset.cat] = !state.catOff[a.dataset.cat]; saveUI(); afterKategorii(); a.setAttribute('aria-pressed', String(!state.catOff[a.dataset.cat])); }
     else if (a.dataset.mode) { state.catMode = a.dataset.mode; saveUI(); const y = window.scrollY; render(); window.scrollTo(0, y); }
