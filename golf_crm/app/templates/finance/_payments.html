@@ -1,0 +1,37 @@
+{% from "macros.html" import payment_status, empty, pagination %}
+{% if payments %}
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>№</th><th>Дата</th><th>Плательщик</th><th>Тип</th><th>Назначение</th><th class="th-num">Сумма</th><th>Способ</th><th>Срок</th><th>Статус</th>{% if can("finance", True) %}<th></th>{% endif %}</tr></thead>
+  <tbody>
+  {% for p in payments %}
+    <tr class="{% if p.status == 'overdue' %}row-danger{% endif %}">
+      <td class="muted">{{ p.id }}</td>
+      <td class="nowrap">{{ p.date|date }}</td>
+      <td><a href="/players/{{ p.member.id }}?tab=payments">{{ p.member.full_name }}</a></td>
+      <td>{{ L.PAYMENT_TYPE[p.type] }}</td>
+      <td class="small">{{ p.comment }}</td>
+      <td class="num">{{ p.amount|money }}</td>
+      <td>{{ L.PAYMENT_METHOD[p.method] }}</td>
+      <td class="nowrap">{{ p.due_date|date }}</td>
+      <td>{{ payment_status(p.status) }}</td>
+      {% if can("finance", True) %}<td class="actions-cell">
+        {% if p.status != "paid" %}
+        <form class="inline" method="post" action="/finance/payments/{{ p.id }}/paid">
+          <button class="btn btn-sm" type="submit" data-confirm="Отметить платёж №{{ p.id }} ({{ p.amount|money }}) как оплаченный?">Отметить оплату</button>
+        </form>
+        {% endif %}
+      </td>{% endif %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+<div class="table-foot">
+  <span>Найдено: {{ total }} {{ plural(total, "платёж", "платежа", "платежей") }} на сумму {{ sum_total|money }}</span>
+  {{ pagination(page, pages, dict(params, tab="payments"), "/finance") }}
+</div>
+{% else %}
+{{ empty("Платежи не найдены", "Измените фильтры.", "wallet") }}
+{% endif %}
+{% if is_htmx %}
+<a class="btn" id="export-link" hx-swap-oob="true" href="/finance/export.csv?{{ query_string(params) }}">Экспорт в CSV</a>
+{% endif %}

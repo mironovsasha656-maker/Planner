@@ -1,0 +1,16 @@
+from app.models.entities import (  # noqa: F401
+    AuditLog,
+    Club,
+    Course,
+    CourseTee,
+    Member,
+    Message,
+    Official,
+    Payment,
+    Registration,
+    Result,
+    Round,
+    Tournament,
+    age_category,
+    age_on,
+)

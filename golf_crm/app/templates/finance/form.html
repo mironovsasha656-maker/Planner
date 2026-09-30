@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% from "macros.html" import field %}
+{% block content %}
+<div class="breadcrumbs"><a href="/finance">Финансы</a> / Новый платёж</div>
+<div class="page-head"><h1>Новый платёж</h1></div>
+{% if errors %}<div class="alert danger">Проверьте поля, отмеченные красным.</div>{% endif %}
+<form class="card" method="post" novalidate>
+  <div class="form-grid">
+    {% call field("member_id", "Плательщик", errors, True, cls="full") %}
+      <select id="f-member_id" name="member_id"><option value="">— выберите игрока —</option>
+        {% for m in members %}<option value="{{ m.id }}" {% if v.member_id == m.id|string %}selected{% endif %}>{{ m.full_name }} · {{ m.license_number }}</option>{% endfor %}
+      </select>
+    {% endcall %}
+    {% call field("type", "Тип платежа", errors, True) %}
+      <select id="f-type" name="type"><option value="membership" {% if v.type == 'membership' %}selected{% endif %}>Членский взнос</option><option value="other" {% if v.type == 'other' %}selected{% endif %}>Прочее</option></select>
+    {% endcall %}
+    {% call field("amount", "Сумма, ₽", errors, help="Для членского взноса можно оставить пустым: " ~ (fees.adult|money) ~ " для взрослых, " ~ (fees.junior|money) ~ " для юниоров и сеньоров.") %}<input type="number" id="f-amount" name="amount" value="{{ v.amount }}" min="1" max="1000000">{% endcall %}
+    {% call field("issued_on", "Дата выставления", errors, True) %}<input type="text" class="date-input" inputmode="numeric" placeholder="ДД.ММ.ГГГГ" maxlength="10" autocomplete="off" id="f-issued_on" name="issued_on" value="{{ v.issued_on }}">{% endcall %}
+    {% call field("due_date", "Срок оплаты", errors, True) %}<input type="text" class="date-input" inputmode="numeric" placeholder="ДД.ММ.ГГГГ" maxlength="10" autocomplete="off" id="f-due_date" name="due_date" value="{{ v.due_date }}">{% endcall %}
+    {% call field("method", "Способ оплаты", errors, True) %}
+      <select id="f-method" name="method">{% for c, l in L.PAYMENT_METHOD.items() %}<option value="{{ c }}" {% if v.method == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+    {% endcall %}
+    {% call field("status", "Статус", errors, True) %}
+      <select id="f-status" name="status"><option value="pending" {% if v.status == 'pending' %}selected{% endif %}>Ожидает оплаты</option><option value="paid" {% if v.status == 'paid' %}selected{% endif %}>Оплачен</option></select>
+    {% endcall %}
+    {% call field("comment", "Комментарий", errors, cls="full") %}<input type="text" id="f-comment" name="comment" value="{{ v.comment }}" maxlength="250">{% endcall %}
+  </div>
+  <p class="muted small mt">Реальная оплата не проводится: это учётная запись в демо-системе.</p>
+  <div class="form-actions"><button class="btn btn-primary" type="submit">Сохранить</button><a class="btn" href="/finance">Отмена</a></div>
+</form>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Журнал действий</h1><div class="sub">Кто, что и когда изменил в системе</div></div>
+</div>
+<div class="card flush">
+  <form class="filters" method="get" action="/audit" hx-get="/audit" hx-target="#results" hx-push-url="true" hx-trigger="change">
+    <div class="field"><label for="au">Пользователь</label>
+      <select id="au" name="user"><option value="">Все</option>{% for u in users %}<option value="{{ u }}" {% if params.user == u %}selected{% endif %}>{{ u }}</option>{% endfor %}</select></div>
+    <div class="field"><label for="aa">Тип действия</label>
+      <select id="aa" name="action"><option value="">Все</option>{% for c, l in L.AUDIT_ACTIONS.items() %}<option value="{{ c }}" {% if params.action == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+    <noscript><button class="btn btn-sm" type="submit">Применить</button></noscript>
+    <a class="btn btn-sm" href="/audit">Сбросить</a>
+  </form>
+  <div id="results">{% include "audit/_table.html" %}</div>
+</div>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% from "macros.html" import icon %}<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ title|default("CRM") }}{% endblock %} — Федерация гольфа МО</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script src="/static/vendor/htmx.min.js" defer></script>
+  <script src="/static/vendor/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <a class="brand" href="/">
+      <span class="brand-logo">{{ icon("flag") }}</span>
+      <span class="brand-text">Федерация гольфа<span>Московской области · CRM</span></span>
+    </a>
+    <nav class="nav">
+      {% set section = active|default("") %}
+      {% for key, url, label, ic in nav %}
+      <a href="{{ url }}" class="{% if key == section %}active{% endif %}" title="{{ label }}">{{ icon(ic) }}<span>{{ label }}</span></a>
+      {% endfor %}
+    </nav>
+    <div class="sidebar-foot">Демонстрационная версия</div>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <button class="menu-toggle" type="button" aria-label="Меню">{{ icon("menu") }}</button>
+      <form class="search" action="/search" method="get" role="search">
+        {{ icon("search", "icon") }}
+        <input type="search" name="q" placeholder="Поиск: игроки, клубы, турниры" autocomplete="off" maxlength="100"
+               hx-get="/search/quick" hx-trigger="input changed delay:250ms, search" hx-target="#search-results" aria-label="Глобальный поиск">
+        <div id="search-results" class="search-results"></div>
+      </form>
+      <div class="topbar-right">
+        <span class="demo-badge" title="Роли переключаются без пароля">ДЕМО: настоящая авторизация не реализована</span>
+        <form class="role-switch" method="post" action="/role">
+          <label for="role-select" class="label-text">Роль:</label>
+          <select id="role-select" name="role" onchange="this.form.submit()">
+            {% for code, label in L.ROLES.items() %}
+            <option value="{{ code }}" {% if code == role %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          <noscript><button class="btn btn-sm" type="submit">Применить</button></noscript>
+        </form>
+      </div>
+    </header>
+    <main class="content">
+      {% if flash %}
+      <div class="flash {{ flash.kind }}" role="status"><span>{{ flash.text }}</span><button type="button" data-dismiss aria-label="Закрыть">×</button></div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+    <footer class="footer">
+      <span>Все данные вымышлены. Демонстрационный прототип CRM Федерации гольфа Московской области.</span>
+      <span>Сегодня: {{ today|date }}</span>
+    </footer>
+  </div>
+</div>
+<script src="/static/js/app.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

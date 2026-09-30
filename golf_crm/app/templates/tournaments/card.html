@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% from "macros.html" import tournament_status, registration_status, tee, empty %}
+{% set editable = can("tournaments", True) %}
+{% block content %}
+<div class="breadcrumbs"><a href="/tournaments">Турниры</a> / {{ t.name }}</div>
+<div class="page-head">
+  <div>
+    <h1>{{ t.name }}</h1>
+    <div class="sub">{{ t.start_date|date }}{% if t.end_date != t.start_date %} – {{ t.end_date|date }}{% endif %} · {{ t.course.club.name }}, {{ t.course.name }} · {{ tournament_status(t.status) }}</div>
+  </div>
+  <div class="actions">
+    <a class="btn" href="/tournaments/{{ t.id }}/print/start" target="_blank" rel="noopener">Стартовый протокол</a>
+    {% if t.status in ("in_progress", "finished") %}<a class="btn" href="/tournaments/{{ t.id }}/print/final" target="_blank" rel="noopener">{{ "Итоговый протокол" if t.status == "finished" else "Промежуточный протокол" }}</a>{% endif %}
+    {% if editable and t.status not in ("finished", "cancelled") %}<a class="btn" href="/tournaments/{{ t.id }}/edit">Редактировать</a>{% endif %}
+    {% if editable %}
+      {% for st in transitions %}
+      <form class="inline" method="post" action="/tournaments/{{ t.id }}/status">
+        <input type="hidden" name="status" value="{{ st }}">
+        {% if st == "finished" %}
+          <button class="btn btn-primary" type="submit" data-confirm="Завершить турнир? Результаты будут зафиксированы и переданы в расчёт гандикапа. Действие нельзя отменить.">Завершить турнир</button>
+        {% elif st == "cancelled" %}
+          <button class="btn btn-danger" type="submit" data-confirm="Отменить турнир «{{ t.name }}»?">Отменить турнир</button>
+        {% elif st == "registration" %}
+          <button class="btn {{ 'btn-primary' if t.status == 'draft' else '' }}" type="submit" {% if t.status == 'in_progress' %}data-confirm="Вернуть турнир в статус «Регистрация открыта»?"{% endif %}>{{ "Открыть регистрацию" if t.status == "draft" else "Вернуть к регистрации" }}</button>
+        {% elif st == "in_progress" %}
+          <button class="btn btn-primary" type="submit" data-confirm="Начать турнир? Регистрация будет закрыта.{% if counts.applied %} Неподтверждённых заявок: {{ counts.applied }} — они не попадут в результаты.{% endif %}">Начать турнир</button>
+        {% elif st == "draft" %}
+          <button class="btn" type="submit" data-confirm="Вернуть турнир в черновики?">В черновик</button>
+        {% endif %}
+      </form>
+      {% endfor %}
+    {% endif %}
+  </div>
+</div>
+
+<nav class="tabs">
+  <a href="?tab=overview" class="{% if tab == 'overview' %}active{% endif %}">Обзор</a>
+  <a href="?tab=registrations" class="{% if tab == 'registrations' %}active{% endif %}">Заявки <span class="count">{{ t.registrations|length }}</span></a>
+  {% if t.status in ("in_progress", "finished") %}
+  <a href="?tab=results" class="{% if tab == 'results' %}active{% endif %}">Ввод результатов</a>
+  <a href="?tab=leaderboard" class="{% if tab == 'leaderboard' %}active{% endif %}">Лидерборд</a>
+  {% endif %}
+</nav>
+
+{% if tab == "overview" %}
+<div class="grid grid-3">
+  <div class="card span-2">
+    <h2>Параметры турнира</h2>
+    <dl class="props">
+      <dt>Формат</dt><dd>{{ L.TOURNAMENT_FORMAT[t.format] }}, {{ t.rounds_count }} {{ plural(t.rounds_count, "раунд", "раунда", "раундов") }}</dd>
+      <dt>Зачёты</dt><dd>{% for c in t.category_codes %}<span class="badge">{{ L.SCORING_CATEGORY[c] }}</span> {% else %}только общий зачёт{% endfor %}</dd>
+      <dt>Поле</dt><dd>{% if can("clubs") %}<a href="/clubs/{{ t.course.club.id }}">{{ t.course.club.name }}</a>{% else %}{{ t.course.club.name }}{% endif %}, {{ t.course.name }}</dd>
+      <dt>Ти поля</dt><dd>{% for te in t.course.tees %}{{ tee(te.color) }} <span class="muted small">CR {{ te.course_rating|dec }} / {{ te.slope_rating }}, пар {{ te.par }}</span><br>{% endfor %}</dd>
+      <dt>Стартовый взнос</dt><dd>{{ t.entry_fee|money }}</dd>
+      <dt>Срок подачи заявок</dt><dd>{{ t.registration_deadline|date }}</dd>
+      <dt>Описание</dt><dd>{{ t.description or "—" }}</dd>
+    </dl>
+  </div>
+  <div class="stack">
+    <div class="card stat {% if t.is_full %}warn{% else %}accent{% endif %}">
+      <div class="label">Занято мест</div>
+      <div class="value">{{ t.occupied }} / {{ t.max_participants }}</div>
+      <div class="bar {% if t.is_full %}full{% endif %}" style="margin-top:8px"><span style="width: {{ [100, (100 * t.occupied / t.max_participants)|round|int]|min }}%"></span></div>
+      <div class="hint">подтверждено: {{ counts.confirmed }}, заявок: {{ counts.applied }}, ожидают: {{ counts.waitlist }}</div>
+    </div>
+    {% if overall.rows %}
+    <div class="card">
+      <h2>Лидеры</h2>
+      <ul class="list">
+        {% for row in overall.rows[:5] %}
+        <li><span><strong>{% if row.tied %}T{% endif %}{{ row.position }}.</strong> {{ row.registration.member.short_name }}</span>
+          <strong>{% if t.format == "stableford" %}{{ row.result.stableford_points }} оч.{% elif t.format == "stroke_net" %}{{ row.result.total_net }}{% else %}{{ row.result.total_gross }}{% endif %}</strong></li>
+        {% endfor %}
+      </ul>
+      <a class="small" href="?tab=leaderboard">Полный лидерборд</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% elif tab == "registrations" %}
+{% if t.status == "registration" and editable %}
+<form class="card mb" method="post" action="/tournaments/{{ t.id }}/register">
+  <h2>Добавить заявку</h2>
+  {% if t.is_full %}<div class="alert">Лимит участников достигнут: новые заявки попадут в лист ожидания.</div>{% endif %}
+  {% if today > t.registration_deadline %}<div class="alert danger">Срок подачи заявок истёк {{ t.registration_deadline|date }}.</div>{% endif %}
+  <div class="filters" style="padding:0;border:0">
+    <div class="field grow"><label for="reg-member">Игрок</label>
+      <select id="reg-member" name="member_id" required>
+        <option value="">— выберите игрока —</option>
+        {% for m in candidates %}<option value="{{ m.id }}">{{ m.full_name }} · {{ m.license_number }} · HCP {{ m.handicap_index|dec }}{% if m.status == 'unpaid' %} · не оплачен взнос{% endif %}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field"><label for="reg-tee">Ти</label>
+      <select id="reg-tee" name="tee"><option value="">Автоматически (М — жёлтые, Ж — красные)</option>
+        {% for te in tees %}<option value="{{ te.color }}">{{ L.TEE_COLORS[te.color] }}</option>{% endfor %}
+      </select>
+    </div>
+    <button class="btn btn-primary" type="submit">Добавить</button>
+  </div>
+</form>
+{% endif %}
+<div class="card flush">
+  <div class="card-head">
+    <h2>Заявки</h2>
+    <span class="muted small">Занято {{ t.occupied }} из {{ t.max_participants }} · подтверждено {{ counts.confirmed }} · заявок {{ counts.applied }} · лист ожидания {{ counts.waitlist }} · отклонено {{ counts.rejected }}</span>
+  </div>
+  {% if regs %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>#</th><th>Игрок</th><th class="th-num">HCP</th><th>Категория</th><th>Ти</th><th>Дата заявки</th><th>Взнос</th><th>Статус</th>{% if editable and t.status not in ("finished", "cancelled") %}<th class="th-num">Действия</th>{% endif %}</tr></thead>
+    <tbody>
+    {% for reg in regs %}{% set m = reg.member %}
+      <tr class="{% if reg.status == 'rejected' %}row-muted{% elif reg.status == 'waitlist' %}row-warn{% endif %}">
+        <td class="muted">{{ loop.index }}</td>
+        <td><a href="/players/{{ m.id }}">{{ m.full_name }}</a><div class="muted small">{{ m.club.name if m.club else "" }}</div></td>
+        <td class="num">{{ m.handicap_index|dec }}</td>
+        <td>{{ L.SCORING_CATEGORY.get(reg.category, "—") }}</td>
+        <td>{{ tee(reg.tee) }}</td>
+        <td class="nowrap">{{ reg.applied_on|date }}</td>
+        <td>{% if t.entry_fee == 0 %}<span class="muted">—</span>{% elif reg.fee_paid %}<span class="badge green">Оплачен</span>{% else %}<span class="badge amber">Не оплачен</span>{% endif %}</td>
+        <td>{{ registration_status(reg.status) }}</td>
+        {% if editable and t.status not in ("finished", "cancelled") %}
+        <td class="actions-cell"><div class="status-actions">
+          {% if reg.status in ("applied", "waitlist") %}
+          <form class="inline" method="post" action="/registrations/{{ reg.id }}/status"><input type="hidden" name="status" value="confirmed"><button class="btn btn-sm" type="submit">Подтвердить</button></form>
+          {% endif %}
+          {% if reg.status in ("applied", "confirmed") %}
+          <form class="inline" method="post" action="/registrations/{{ reg.id }}/status"><input type="hidden" name="status" value="waitlist"><button class="btn btn-sm" type="submit" data-confirm="Перевести {{ m.full_name }} в лист ожидания?">В лист ожидания</button></form>
+          {% endif %}
+          {% if reg.status == "rejected" %}
+          <form class="inline" method="post" action="/registrations/{{ reg.id }}/status"><input type="hidden" name="status" value="applied"><button class="btn btn-sm" type="submit">Восстановить</button></form>
+          {% else %}
+          <form class="inline" method="post" action="/registrations/{{ reg.id }}/status"><input type="hidden" name="status" value="rejected"><button class="btn btn-sm btn-danger" type="submit" data-confirm="Отклонить заявку {{ m.full_name }}?">Отклонить</button></form>
+          {% endif %}
+          {% if t.entry_fee and not reg.fee_paid and reg.status in ("applied", "confirmed") %}
+          <form class="inline" method="post" action="/registrations/{{ reg.id }}/fee"><button class="btn btn-sm" type="submit" data-confirm="Отметить стартовый взнос {{ t.entry_fee|money }} как оплаченный?">Взнос оплачен</button></form>
+          {% endif %}
+        </div></td>
+        {% endif %}
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}{{ empty("Заявок пока нет", "Заявки появятся после открытия регистрации." if t.status == "draft" else "", "users") }}{% endif %}
+</div>
+
+{% elif tab == "results" %}
+{% if t.status == "in_progress" and editable %}
+<div class="alert info">Введите гросс-результаты раундов (целое число ударов). Нетто, очки стейблфорд и места считаются автоматически. Course handicap фиксируется при первом вводе.</div>
+<form class="card flush" method="post" action="/tournaments/{{ t.id }}/results">
+  {% if entries %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Игрок</th><th>Ти</th><th class="th-num">HCP / CH</th>{% for k in range(t.rounds_count) %}<th class="center">Раунд {{ k + 1 }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for e in entries %}{% set reg = e.reg %}
+      <tr>
+        <td>{{ reg.member.full_name }}</td>
+        <td>{{ tee(reg.tee) }}</td>
+        <td class="num">{{ reg.member.handicap_index|dec }} / {{ e.ch }}</td>
+        {% for k in range(t.rounds_count) %}{% set key = "r%d_%d" % (k + 1, reg.id) %}
+        <td class="center"><div class="field {% if errors.get(key) %}has-error{% endif %}" style="display:inline-block">
+          <input class="score-input" type="text" inputmode="numeric" name="{{ key }}" value="{{ e.scores[k] if e.scores[k] is not none else '' }}" maxlength="3" aria-label="Раунд {{ k + 1 }}: {{ reg.member.full_name }}" title="{{ errors.get(key, '') }}">
+          {% if errors.get(key) %}<div class="error">{{ errors[key] }}</div>{% endif %}
+        </div></td>
+        {% endfor %}
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  <div class="table-foot"><span>Подтверждённых участников: {{ entries|length }}</span><button class="btn btn-primary" type="submit">Сохранить и пересчитать</button></div>
+  {% else %}{{ empty("Нет подтверждённых участников", "Результаты вводятся только для подтверждённых заявок.", "users") }}{% endif %}
+</form>
+{% else %}
+<div class="card">{{ empty("Ввод результатов закрыт", "Турнир завершён — результаты зафиксированы. См. лидерборд." if t.status == "finished" else "Недоступно для текущей роли.", "trophy") }}</div>
+{% endif %}
+
+{% elif tab == "leaderboard" %}
+{% if t.status == "in_progress" %}<div class="alert info">Турнир идёт: игроки с большим числом сыгранных раундов стоят выше. Результаты предварительные.</div>{% endif %}
+<div class="card flush mb">
+  <div class="card-head"><h2>{{ overall.title }}</h2><span class="muted small">{{ L.TOURNAMENT_FORMAT[t.format] }}</span></div>
+  {% if overall.rows %}<div class="table-wrap">{% with board=overall, link=True %}{% include "tournaments/_board.html" %}{% endwith %}</div>
+  {% else %}{{ empty("Результатов пока нет", icon_name="trophy") }}{% endif %}
+</div>
+{% for board in cat_boards %}
+<div class="card flush mb">
+  <div class="card-head"><h2>Зачёт: {{ board.title }}</h2></div>
+  <div class="table-wrap">{% with link=True %}{% include "tournaments/_board.html" %}{% endwith %}</div>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

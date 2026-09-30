@@ -1,0 +1,6 @@
+golf_crm.db
+logs/
+__pycache__/
+.pytest_cache/
+*.pyc
+.venv/

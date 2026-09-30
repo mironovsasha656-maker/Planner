@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from "macros.html" import empty %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Рассылки</h1><div class="sub">Отправка имитируется: письма не уходят, получатели записываются в журнал.</div></div>
+  {% if can("mailings", True) %}<a class="btn btn-primary" href="/mailings/new">+ Новая рассылка</a>{% endif %}
+</div>
+<div class="card flush">
+  {% if messages %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Дата</th><th>Тема</th><th>Сегмент</th><th class="th-num">Получателей</th><th>Отправитель</th><th>Статус</th></tr></thead>
+    <tbody>
+    {% for msg in messages %}
+      <tr>
+        <td class="nowrap">{{ msg.sent_at|datetime }}</td>
+        <td><a href="/mailings/{{ msg.id }}">{{ msg.subject }}</a></td>
+        <td class="small">{{ msg.segment_label }}</td>
+        <td class="num">{{ msg.recipients_count }}</td>
+        <td>{{ msg.sent_by }}</td>
+        <td><span class="badge green">{{ L.MESSAGE_STATUS.get(msg.status, msg.status) }}</span></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}{{ empty("Рассылок ещё не было", "Создайте первую рассылку.", "mail") }}{% endif %}
+</div>
+{% endblock %}

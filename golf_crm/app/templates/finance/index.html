@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% from "macros.html" import payment_status, member_status, empty %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Финансы</h1><div class="sub">Членские и турнирные взносы. Оплата имитируется: статусы меняются вручную.</div></div>
+  <div class="actions">
+    {% if tab == "payments" %}<a class="btn" id="export-link" href="/finance/export.csv?{{ query_string(params) }}">Экспорт в CSV</a>{% endif %}
+    {% if can("finance", True) %}<a class="btn btn-primary" href="/finance/payments/new">+ Новый платёж</a>{% endif %}
+  </div>
+</div>
+
+<div class="grid grid-3 mb">
+  {% set od = outstanding.get("overdue", (0, 0)) %}{% set pe = outstanding.get("pending", (0, 0)) %}
+  <a class="card stat danger" href="/finance?tab=payments&status=overdue"><div class="label">Просрочено</div><div class="value">{{ od[1]|money }}</div><div class="hint">{{ od[0] }} {{ plural(od[0], "платёж", "платежа", "платежей") }}</div></a>
+  <a class="card stat warn" href="/finance?tab=payments&status=pending"><div class="label">Ожидает оплаты</div><div class="value">{{ pe[1]|money }}</div><div class="hint">{{ pe[0] }} {{ plural(pe[0], "платёж", "платежа", "платежей") }}</div></a>
+  <a class="card stat" href="/finance?tab=debtors"><div class="label">Должники по членскому взносу {{ today.year }}</div><div class="value">{{ debtor_count }}</div><div class="hint">взнос: взрослые {{ fees.adult|money }}, юниоры и сеньоры {{ fees.junior|money }}</div></a>
+</div>
+
+<nav class="tabs">
+  <a href="/finance?tab=payments" class="{% if tab == 'payments' %}active{% endif %}">Платежи</a>
+  <a href="/finance?tab=debtors" class="{% if tab == 'debtors' %}active{% endif %}">Должники <span class="count">{{ debtor_count }}</span></a>
+  <a href="/finance?tab=summary" class="{% if tab == 'summary' %}active{% endif %}">Сводка по месяцам</a>
+</nav>
+
+{% if tab == "payments" %}
+<div class="card flush">
+  <form class="filters" method="get" action="/finance" hx-get="/finance" hx-target="#results" hx-push-url="true"
+        hx-trigger="change, input changed delay:350ms from:.live-input">
+    <input type="hidden" name="tab" value="payments">
+    <div class="field grow"><label for="fq">Поиск</label><input type="search" class="live-input" id="fq" name="q" value="{{ params.q }}" placeholder="ФИО, лицензия, назначение" maxlength="100"></div>
+    <div class="field"><label for="ft">Тип</label><select id="ft" name="type"><option value="">Все</option>{% for c, l in L.PAYMENT_TYPE.items() %}<option value="{{ c }}" {% if params.type == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+    <div class="field"><label for="fs">Статус</label><select id="fs" name="status"><option value="">Все</option>{% for c, l in L.PAYMENT_STATUS.items() %}<option value="{{ c }}" {% if params.status == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+    <div class="field"><label for="fm">Способ</label><select id="fm" name="method"><option value="">Все</option>{% for c, l in L.PAYMENT_METHOD.items() %}<option value="{{ c }}" {% if params.method == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+    <div class="field"><label for="fd1">Дата с</label><input type="text" class="date-input" inputmode="numeric" placeholder="ДД.ММ.ГГГГ" maxlength="10" autocomplete="off" id="fd1" name="date_from" value="{{ params.date_from }}"></div>
+    <div class="field"><label for="fd2">по</label><input type="text" class="date-input" inputmode="numeric" placeholder="ДД.ММ.ГГГГ" maxlength="10" autocomplete="off" id="fd2" name="date_to" value="{{ params.date_to }}"></div>
+    <noscript><button class="btn btn-sm" type="submit">Применить</button></noscript>
+    <a class="btn btn-sm" href="/finance">Сбросить</a>
+  </form>
+  <div id="results">{% include "finance/_payments.html" %}</div>
+</div>
+
+{% elif tab == "debtors" %}
+<div class="card flush">
+  <div class="card-head"><h2>Не оплачен членский взнос за {{ today.year }} год</h2>{% if can("mailings", True) %}<a class="btn btn-sm" href="/mailings/new?segment=debtors">Разослать напоминание</a>{% endif %}</div>
+  {% if debtors %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Игрок</th><th>Клуб</th><th>Контакты</th><th class="th-num">Сумма</th><th>Срок оплаты</th><th>Статус платежа</th><th>Статус игрока</th>{% if can("finance", True) %}<th></th>{% endif %}</tr></thead>
+    <tbody>
+    {% for p in debtors %}{% set m = p.member %}
+      <tr class="{% if p.status == 'overdue' %}row-danger{% endif %}">
+        <td><a href="/players/{{ m.id }}?tab=payments">{{ m.full_name }}</a><div class="muted small">{{ m.license_number }} · {{ L.AGE_CATEGORY[m.age_category] }}</div></td>
+        <td class="small">{{ m.club.name if m.club else "—" }}</td>
+        <td class="small">{{ m.phone }}<br>{{ m.email }}</td>
+        <td class="num">{{ p.amount|money }}</td>
+        <td class="nowrap">{{ p.due_date|date }}{% if p.status == 'overdue' %}<div class="small" style="color: var(--red-700)">просрочка {{ (today - p.due_date).days }} {{ plural((today - p.due_date).days, "день", "дня", "дней") }}</div>{% endif %}</td>
+        <td>{{ payment_status(p.status) }}</td>
+        <td>{{ member_status(m.status) }}</td>
+        {% if can("finance", True) %}<td class="actions-cell">
+          <form class="inline" method="post" action="/finance/payments/{{ p.id }}/paid">
+            <button class="btn btn-sm" type="submit" data-confirm="Отметить членский взнос {{ m.full_name }} ({{ p.amount|money }}) как оплаченный?">Отметить оплату</button>
+          </form>
+        </td>{% endif %}
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}{{ empty("Должников нет", "Все членские взносы за текущий год оплачены.", "wallet") }}{% endif %}
+</div>
+
+{% else %}
+<div class="card mb">
+  <div class="card-head"><h2>Поступления по месяцам</h2><span class="muted">за 12 месяцев: <strong>{{ year_total|money }}</strong></span></div>
+  <div class="chart-box" style="height:300px"><canvas id="finance-chart"></canvas></div>
+</div>
+<div class="card flush">
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Месяц</th>{% for c, l in L.PAYMENT_TYPE.items() %}<th class="th-num">{{ l }}</th>{% endfor %}<th class="th-num">Платежей</th><th class="th-num">Итого</th></tr></thead>
+    <tbody>
+    {% for r in rows|reverse %}
+      <tr><td>{{ r.label }}</td>{% for c in L.PAYMENT_TYPE %}<td class="num">{{ r.by_type[c]|money }}</td>{% endfor %}<td class="num">{{ r.count }}</td><td class="num"><strong>{{ r.total|money }}</strong></td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if tab == "summary" %}
+<script>
+(function () {
+  var d = {{ chart|tojson }};
+  var colors = GolfCRM.colors.palette;
+  var datasets = d.series.map(function (series, i) {
+    return { label: series.label, data: series.data, backgroundColor: [colors[3], colors[2], colors[0]][i], borderRadius: 3, stack: "s" };
+  });
+  GolfCRM.chart("finance-chart", {
+    type: "bar",
+    data: { labels: d.labels, datasets: datasets },
+    options: {
+      interaction: { mode: "index", intersect: false },
+      scales: {
+        x: { stacked: true, grid: { display: false } },
+        y: { stacked: true, grid: { color: "#eff2f0" }, ticks: { callback: function (v) { return GolfCRM.formatNumber(v); } } }
+      },
+      plugins: { tooltip: { callbacks: { label: function (ctx) { return ctx.dataset.label + ": " + GolfCRM.formatRub(ctx.parsed.y); } } } }
+    }
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% from "macros.html" import field %}
+{% block content %}
+<div class="breadcrumbs"><a href="/tournaments">Турниры</a>{% if t %} / <a href="/tournaments/{{ t.id }}">{{ t.name }}</a>{% endif %}</div>
+<div class="page-head"><h1>{{ "Редактирование турнира" if t else "Новый турнир" }}</h1></div>
+{% if errors %}<div class="alert danger">Проверьте поля, отмеченные красным.</div>{% endif %}
+<form class="card" method="post" novalidate>
+  <div class="form-grid">
+    {% call field("name", "Название", errors, True, cls="full") %}<input type="text" id="f-name" name="name" value="{{ v.name }}" maxlength="150" required>{% endcall %}
+    {% call field("start_date", "Дата начала", errors, True) %}<input type="text" class="date-input" inputmode="numeric" placeholder="ДД.ММ.ГГГГ" maxlength="10" autocomplete="off" id="f-start_date" name="start_date" value="{{ v.start_date }}" required>{% endcall %}
+    {% call field("end_date", "Дата окончания", errors, True) %}<input type="text" class="date-input" inputmode="numeric" placeholder="ДД.ММ.ГГГГ" maxlength="10" autocomplete="off" id="f-end_date" name="end_date" value="{{ v.end_date }}" required>{% endcall %}
+    {% call field("course_id", "Поле", errors, True) %}
+      <select id="f-course_id" name="course_id"><option value="">— выберите —</option>
+        {% for course, club in courses %}<option value="{{ course.id }}" {% if v.course_id == course.id|string %}selected{% endif %}>{{ club.name }} — {{ course.name }} ({{ course.holes }} лунок)</option>{% endfor %}
+      </select>
+    {% endcall %}
+    {% call field("format", "Формат", errors, True) %}
+      <select id="f-format" name="format">{% for code, label in L.TOURNAMENT_FORMAT.items() %}<option value="{{ code }}" {% if v.format == code %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    {% endcall %}
+    {% call field("rounds_count", "Количество раундов", errors, True) %}<input type="number" id="f-rounds_count" name="rounds_count" value="{{ v.rounds_count }}" min="1" max="4" required>{% endcall %}
+    {% call field("entry_fee", "Стартовый взнос, ₽", errors, True) %}<input type="number" id="f-entry_fee" name="entry_fee" value="{{ v.entry_fee }}" min="0" max="100000" step="100" required>{% endcall %}
+    {% call field("max_participants", "Лимит участников", errors, True, help="При превышении лимита новые заявки уходят в лист ожидания.") %}<input type="number" id="f-max_participants" name="max_participants" value="{{ v.max_participants }}" min="2" max="200" required>{% endcall %}
+    {% call field("registration_deadline", "Срок подачи заявок", errors, True) %}<input type="text" class="date-input" inputmode="numeric" placeholder="ДД.ММ.ГГГГ" maxlength="10" autocomplete="off" id="f-registration_deadline" name="registration_deadline" value="{{ v.registration_deadline }}" required>{% endcall %}
+    <div class="field full">
+      <label>Зачёты (категории)</label>
+      <div class="checkbox-group">
+        {% for code, label in L.SCORING_CATEGORY.items() %}<label><input type="checkbox" name="categories" value="{{ code }}" {% if code in v.categories %}checked{% endif %}> {{ label }}</label>{% endfor %}
+      </div>
+      <div class="help">Категория игрока определяется автоматически: юниоры и сеньоры (если есть такой зачёт), затем по полу.</div>
+    </div>
+    {% if not t %}
+    {% call field("status", "Начальный статус", errors, True) %}
+      <select id="f-status" name="status"><option value="draft" {% if v.status == 'draft' %}selected{% endif %}>Черновик</option><option value="registration" {% if v.status == 'registration' %}selected{% endif %}>Регистрация открыта</option></select>
+    {% endcall %}
+    {% endif %}
+    {% call field("description", "Описание", errors, cls="full") %}<textarea id="f-description" name="description" maxlength="2000">{{ v.description }}</textarea>{% endcall %}
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">Сохранить</button>
+    <a class="btn" href="{{ '/tournaments/%d' % t.id if t else '/tournaments' }}">Отмена</a>
+  </div>
+</form>
+{% endblock %}

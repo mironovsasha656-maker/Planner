@@ -1,0 +1,27 @@
+{# Leaderboard table. Expects: board, t, link (bool) #}
+{% from "macros.html" import tee %}
+<table class="table">
+  <thead>
+    <tr>
+      <th>Место</th><th>Игрок</th><th>Клуб</th><th class="th-num" title="Гандикап на поле (course handicap)">CH</th>
+      {% for k in range(t.rounds_count) %}<th class="th-num">R{{ k + 1 }}</th>{% endfor %}
+      <th class="th-num">Гросс</th>
+      {% if t.format != "stroke_gross" %}<th class="th-num">Нетто</th>{% endif %}
+      {% if t.format == "stableford" %}<th class="th-num">Очки</th>{% else %}<th class="th-num">К пару</th>{% endif %}
+    </tr>
+  </thead>
+  <tbody>
+  {% for row in board.rows %}{% set m = row.registration.member %}{% set r = row.result %}
+    <tr>
+      <td class="leader-pos">{% if row.tied %}T{% endif %}{{ row.position }}</td>
+      <td>{% if link %}<a href="/players/{{ m.id }}">{{ m.full_name }}</a>{% else %}{{ m.full_name }}{% endif %}</td>
+      <td class="small">{{ m.club.name if m.club else "—" }}</td>
+      <td class="num">{{ r.course_handicap }}</td>
+      {% for s in row.scores %}<td class="num">{{ s if s is not none else "—" }}</td>{% endfor %}
+      <td class="num">{{ r.total_gross }}</td>
+      {% if t.format != "stroke_gross" %}<td class="num">{{ r.total_net }}</td>{% endif %}
+      {% if t.format == "stableford" %}<td class="num"><strong>{{ r.stableford_points }}</strong></td>{% else %}<td class="num"><strong>{{ row.to_par|signed }}</strong></td>{% endif %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>

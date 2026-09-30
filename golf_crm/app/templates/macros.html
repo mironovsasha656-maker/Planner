@@ -1,0 +1,75 @@
+{% macro icon(name, cls="") -%}
+<svg class="{{ cls }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{%- if name == "home" -%}<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>
+{%- elif name == "users" -%}<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14c2.8 0 4.5 2 4.5 5"/>
+{%- elif name == "flag" -%}<path d="M6 21V3"/><path d="M6 4l11 4-11 4"/><ellipse cx="10" cy="21" rx="7" ry="1.2"/>
+{%- elif name == "trophy" -%}<path d="M8 4h8v5a4 4 0 0 1-8 0V4z"/><path d="M8 6H4a3 3 0 0 0 4 4"/><path d="M16 6h4a3 3 0 0 1-4 4"/><path d="M12 13v4"/><path d="M8 20h8"/>
+{%- elif name == "chart" -%}<path d="M4 20V4"/><path d="M4 20h16"/><path d="M7 15l4-4 3 3 5-6"/>
+{%- elif name == "wallet" -%}<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><path d="M16 14h2"/>
+{%- elif name == "whistle" -%}<circle cx="9" cy="14" r="5"/><path d="M13 11l8-4v4l-7 2"/><circle cx="9" cy="14" r="1"/>
+{%- elif name == "mail" -%}<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>
+{%- elif name == "list" -%}<path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>
+{%- elif name == "search" -%}<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>
+{%- elif name == "menu" -%}<path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/>
+{%- elif name == "ball" -%}<circle cx="12" cy="12" r="8"/><circle cx="10" cy="9" r=".6"/><circle cx="13" cy="10" r=".6"/><circle cx="11" cy="12" r=".6"/><circle cx="14" cy="13" r=".6"/>
+{%- elif name == "inbox" -%}<path d="M4 13l2-8h12l2 8"/><path d="M4 13v6h16v-6"/><path d="M4 13h5l1 2h4l1-2h5"/>
+{%- endif -%}
+</svg>
+{%- endmacro %}
+
+{% macro member_status(code) -%}
+<span class="badge {{ {'active': 'green', 'suspended': 'gray', 'unpaid': 'red'}.get(code, '') }}">{{ L.MEMBER_STATUS.get(code, code) }}</span>
+{%- endmacro %}
+
+{% macro tournament_status(code) -%}
+<span class="badge {{ {'draft': 'blue', 'registration': 'green', 'in_progress': 'amber', 'finished': 'gray', 'cancelled': 'red'}.get(code, '') }}">{{ L.TOURNAMENT_STATUS.get(code, code) }}</span>
+{%- endmacro %}
+
+{% macro registration_status(code) -%}
+<span class="badge {{ {'applied': 'blue', 'confirmed': 'green', 'waitlist': 'amber', 'rejected': 'gray'}.get(code, '') }}">{{ L.REGISTRATION_STATUS.get(code, code) }}</span>
+{%- endmacro %}
+
+{% macro payment_status(code) -%}
+<span class="badge {{ {'pending': 'amber', 'paid': 'green', 'overdue': 'red'}.get(code, '') }}">{{ L.PAYMENT_STATUS.get(code, code) }}</span>
+{%- endmacro %}
+
+{% macro tee(color) -%}
+<span class="nowrap"><span class="tee tee-{{ color }}"></span>{{ L.TEE_COLORS.get(color, color) }}</span>
+{%- endmacro %}
+
+{% macro empty(title, text="", icon_name="inbox") -%}
+<div class="empty">
+  {{ icon(icon_name, "icon") }}
+  <strong>{{ title }}</strong>
+  {% if text %}<div>{{ text }}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro pagination(page, pages, params, path) -%}
+{% if pages > 1 %}
+<nav class="pagination" aria-label="Страницы">
+  {% if page > 1 %}<a href="{{ path }}?{{ query_string(params, page=page - 1) }}" hx-get="{{ path }}?{{ query_string(params, page=page - 1) }}" hx-target="#results" hx-push-url="true">‹ Назад</a>{% endif %}
+  {% for p in range(1, pages + 1) %}
+    {% if p == page %}<span class="current">{{ p }}</span>
+    {% elif p == 1 or p == pages or (p - page)|abs <= 2 %}<a href="{{ path }}?{{ query_string(params, page=p) }}" hx-get="{{ path }}?{{ query_string(params, page=p) }}" hx-target="#results" hx-push-url="true">{{ p }}</a>
+    {% elif (p - page)|abs == 3 %}<span class="gap">…</span>{% endif %}
+  {% endfor %}
+  {% if page < pages %}<a href="{{ path }}?{{ query_string(params, page=page + 1) }}" hx-get="{{ path }}?{{ query_string(params, page=page + 1) }}" hx-target="#results" hx-push-url="true">Вперёд ›</a>{% endif %}
+</nav>
+{% endif %}
+{%- endmacro %}
+
+{% macro field(name, label, errors, required=False, help="", cls="") -%}
+<div class="field {{ cls }} {% if errors.get(name) %}has-error{% endif %}">
+  <label for="f-{{ name }}">{{ label }}{% if required %} <span class="req">*</span>{% endif %}</label>
+  {{ caller() }}
+  {% if errors.get(name) %}<div class="error">{{ errors[name] }}</div>{% elif help %}<div class="help">{{ help }}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro sort_th(label, key, params, path, cls="") -%}
+{% set current = params.get('sort', '') %}
+{% set desc = current == '-' ~ key %}
+{% set target = ('-' ~ key) if current == key else key %}
+<th class="{{ cls }}"><a href="{{ path }}?{{ query_string(params, sort=target, page=None) }}" hx-get="{{ path }}?{{ query_string(params, sort=target, page=None) }}" hx-target="#results" hx-push-url="true" class="{% if current in (key, '-' ~ key) %}sorted{% endif %}">{{ label }}{% if current == key %} ↑{% elif desc %} ↓{% endif %}</a></th>
+{%- endmacro %}
