@@ -1,0 +1,34 @@
+{% extends "print/base.html" %}
+{% block title %}Стартовый протокол{% endblock %}
+{% block body %}
+<h1>Стартовый протокол</h1>
+<div class="subtitle">
+  <strong>{{ t.name }}</strong><br>
+  {{ t.course.club.name }}, {{ t.course.name }} · Раунд 1 · {{ round_day|date }}<br>
+  {{ L.TOURNAMENT_FORMAT[t.format] }} · старт с 1-й лунки, интервал 10 минут
+</div>
+{% if groups %}
+<table>
+  <thead><tr><th style="width:70px">Время</th><th>№</th><th>Игрок</th><th>Клуб</th><th>Лицензия</th><th>Ти</th><th>HCP</th><th>CH</th></tr></thead>
+  <tbody>
+  {% for g in groups %}
+    {% for row in g.rows %}{% set m = row.reg.member %}
+    <tr>
+      {% if loop.first %}<td rowspan="{{ g.rows|length }}" class="center"><strong>{{ g.time }}</strong></td>{% endif %}
+      <td class="center">{{ loop.index }}</td>
+      <td>{{ m.full_name }}</td>
+      <td>{{ m.club.name if m.club else "—" }}</td>
+      <td>{{ m.license_number }}</td>
+      <td>{{ L.TEE_COLORS[row.reg.tee] }}</td>
+      <td class="num">{{ m.handicap_index|dec }}</td>
+      <td class="num">{{ row.ch }}</td>
+    </tr>
+    {% endfor %}
+  {% endfor %}
+  </tbody>
+</table>
+<p class="small">Участников: {{ groups|sum(attribute="rows", start=[])|length }}. Группы сформированы по убыванию гандикапа. HCP — индекс гандикапа, CH — course handicap (упрощённый демо-расчёт).</p>
+{% else %}
+<p class="center muted">Нет подтверждённых участников.</p>
+{% endif %}
+{% endblock %}

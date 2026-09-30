@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% from "macros.html" import task_status, priority, empty, icon %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Задачи</h1><div class="sub">Поручения менеджерам и ход их выполнения</div></div>
+  <button class="btn btn-primary" type="button" hx-get="/tasks/new" hx-target="#modal-content">{{ icon("plus") }} Новая задача</button>
+</div>
+
+<div id="task-list" hx-get="/tasks?{{ query_string(params) }}" hx-trigger="tasksChanged from:body" hx-select="#task-list" hx-swap="outerHTML" hx-disinherit="*">
+<div class="grid grid-4 mb">
+  <a class="card stat accent" href="/tasks?status=open"><div class="label">Открытые</div><div class="value">{{ stats.open }}</div><div class="hint">новые и в работе</div></a>
+  <a class="card stat {% if stats.overdue %}danger{% endif %}" href="/tasks?status=overdue"><div class="label">Просрочены</div><div class="value">{{ stats.overdue }}</div><div class="hint">срок истёк, не выполнены</div></a>
+  <a class="card stat" href="/tasks?status=done"><div class="label">Выполнено за 7 дней</div><div class="value">{{ stats.done_week }}</div><div class="hint">из них досрочно: {{ stats.early_week }}</div></a>
+  <div class="card stat"><div class="label">Команда</div>
+    <div class="small" style="margin-top:6px">
+      {% for row in team %}<div class="nowrap" style="display:flex;justify-content:space-between;gap:8px"><a href="/tasks?assignee={{ row.user.id }}">{{ row.user.name }}</a><span class="muted">{{ row.open }} откр.{% if row.overdue %} · <span style="color: var(--danger)">{{ row.overdue }} проср.</span>{% endif %}</span></div>{% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="card flush">
+  <form class="filters" method="get" action="/tasks" hx-get="/tasks" hx-target="#task-list" hx-select="#task-list" hx-swap="outerHTML" hx-push-url="true"
+        hx-trigger="change, input changed delay:350ms from:.live-input">
+    <div class="field grow"><label for="tq">Поиск</label><input type="search" class="live-input" id="tq" name="q" value="{{ params.q }}" placeholder="Название или описание" maxlength="100"></div>
+    <div class="field"><label for="ta">Исполнитель</label>
+      <select id="ta" name="assignee"><option value="">Все</option>{% for m in managers %}<option value="{{ m.id }}" {% if params.assignee == m.id|string %}selected{% endif %}>{{ m.name }}</option>{% endfor %}</select></div>
+    <div class="field"><label for="ts">Статус</label>
+      <select id="ts" name="status">
+        {% for code, label in [("open", "Открытые"), ("overdue", "Просроченные"), ("new", "Новые"), ("in_progress", "В работе"), ("done", "Выполненные"), ("cancelled", "Отменённые"), ("all", "Все")] %}
+        <option value="{{ code }}" {% if params.status == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label for="tp">Приоритет</label>
+      <select id="tp" name="priority"><option value="">Любой</option>{% for c, l in L.TASK_PRIORITY.items() %}<option value="{{ c }}" {% if params.priority == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+    <noscript><button class="btn btn-sm" type="submit">Применить</button></noscript>
+    <a class="btn btn-sm btn-ghost" href="/tasks">Сбросить</a>
+  </form>
+  {% if rows %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Задача</th><th>Исполнитель</th><th>Приоритет</th><th>Срок</th><th>Статус</th><th>Связано с</th></tr></thead>
+    <tbody>
+    {% for r in rows %}{% set t = r.t %}
+      <tr class="clickable {% if r.overdue %}row-danger{% endif %}" hx-get="/tasks/{{ t.id }}/panel" hx-target="#panel-content" hx-trigger="click, keyup[key=='Enter']" tabindex="0">
+        <td><a href="/tasks/{{ t.id }}" onclick="event.preventDefault()">{{ t.title }}</a><div class="muted small">№{{ t.id }} · создана {{ t.created_at.strftime("%d.%m.%Y %H:%M") }}</div></td>
+        <td class="nowrap">{{ t.assignee.name }}</td>
+        <td>{{ priority(t.priority) }}</td>
+        <td class="nowrap">{{ t.due_at.strftime("%d.%m.%Y %H:%M") }}
+          {% if r.overdue %}<div class="small" style="color: var(--danger)">просрочена на {{ r.left }}</div>
+          {% elif t.is_open %}<div class="small muted">осталось {{ r.left }}</div>
+          {% elif t.status == "done" %}<div class="small muted">выполнена {{ t.completed_at.strftime("%d.%m.%Y %H:%M") }}</div>{% endif %}
+        </td>
+        <td>{{ task_status(t.display_status, t.is_early) }}</td>
+        <td class="small">{% if r.related %}<span class="muted">{{ r.related.type }}:</span> {{ r.related.name }}{% else %}<span class="muted">—</span>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  <div class="table-foot"><span>Найдено: {{ rows|length }} {{ plural(rows|length, "задача", "задачи", "задач") }}</span><span>Нажмите на строку, чтобы открыть подробности</span></div>
+  {% else %}
+  {{ empty("Задач не найдено", "Измените фильтры или создайте новую задачу.", "check") }}
+  {% endif %}
+</div>
+</div>
+{% endblock %}

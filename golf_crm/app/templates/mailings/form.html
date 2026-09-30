@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "macros.html" import field %}
+{% block content %}
+<div class="breadcrumbs"><a href="/mailings">Рассылки</a> / Новая рассылка</div>
+<div class="page-head"><h1>Новая рассылка</h1></div>
+{% if errors %}<div class="alert danger">Проверьте поля, отмеченные красным.</div>{% endif %}
+<div class="grid grid-2">
+  <form class="card" method="post" action="/mailings/new" id="mailing-form" novalidate
+        hx-get="/mailings/preview" hx-target="#preview" hx-trigger="change from:.segment-input" hx-swap="innerHTML">
+    <div class="form-grid" style="grid-template-columns: 1fr">
+      {% call field("segment", "Получатели (сегмент)", errors, True) %}
+        <select id="f-segment" name="segment" class="segment-input" onchange="GolfMail.toggle()">
+          {% for c, l in L.SEGMENTS.items() %}<option value="{{ c }}" {% if v.segment == c %}selected{% endif %}>{{ l }}</option>{% endfor %}
+        </select>
+      {% endcall %}
+      <div class="field" id="club-field">
+        <label for="f-club">Клуб</label>
+        <select id="f-club" name="club_id" class="segment-input"><option value="">— выберите клуб —</option>{% for c in clubs %}<option value="{{ c.id }}" {% if v.club_id == c.id|string %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select>
+      </div>
+      <div class="field" id="tournament-field">
+        <label for="f-tournament">Турнир</label>
+        <select id="f-tournament" name="tournament_id" class="segment-input"><option value="">— выберите турнир —</option>{% for t in tournaments %}<option value="{{ t.id }}" {% if v.tournament_id == t.id|string %}selected{% endif %}>{{ t.name }} ({{ t.start_date|date }})</option>{% endfor %}</select>
+      </div>
+      {% call field("subject", "Тема", errors, True) %}<input type="text" id="f-subject" name="subject" value="{{ v.subject }}" maxlength="200" placeholder="например, Напоминание об оплате взноса">{% endcall %}
+      {% call field("body", "Текст сообщения", errors, True) %}<textarea id="f-body" name="body" maxlength="5000" style="min-height:180px">{{ v.body }}</textarea>{% endcall %}
+    </div>
+    <p class="muted small">Демо-режим: письма не отправляются. Будет создана запись о рассылке, список получателей запишется в журнал <code>logs/mailings.log</code>.</p>
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit" data-confirm="«Отправить» рассылку? Письма не уйдут — это имитация.">Отправить (имитация)</button>
+      <a class="btn" href="/mailings">Отмена</a>
+    </div>
+  </form>
+  <div class="card">
+    <h2>Предпросмотр получателей</h2>
+    <div id="preview">{% include "mailings/_preview.html" %}</div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+window.GolfMail = {
+  toggle: function () {
+    var seg = document.getElementById("f-segment").value;
+    document.getElementById("club-field").classList.toggle("hidden", seg !== "club");
+    document.getElementById("tournament-field").classList.toggle("hidden", seg !== "tournament");
+  }
+};
+GolfMail.toggle();
+</script>
+{% endblock %}

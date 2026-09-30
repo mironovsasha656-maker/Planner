@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="breadcrumbs"><a href="/mailings">Рассылки</a> / {{ msg.subject }}</div>
+<div class="page-head">
+  <div><h1>{{ msg.subject }}</h1><div class="sub">{{ msg.sent_at|datetime }} · {{ msg.sent_by }}</div></div>
+</div>
+<div class="grid grid-3">
+  <div class="card span-2">
+    <h2>Текст сообщения</h2>
+    <div class="message-body">{{ msg.body }}</div>
+  </div>
+  <div class="card">
+    <dl class="props" style="grid-template-columns: 110px 1fr">
+      <dt>Сегмент</dt><dd>{{ msg.segment_label }}</dd>
+      <dt>Получателей</dt><dd><strong>{{ msg.recipients_count }}</strong></dd>
+      <dt>Статус</dt><dd><span class="badge green">{{ L.MESSAGE_STATUS.get(msg.status, msg.status) }}</span></dd>
+    </dl>
+    <p class="muted small mt">Письма фактически не отправлялись. Список получателей на момент «отправки» записан в журнал <code>logs/mailings.log</code>.</p>
+  </div>
+</div>
+{% endblock %}

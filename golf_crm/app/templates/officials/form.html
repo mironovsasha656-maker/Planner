@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% from "macros.html" import field %}
+{% block content %}
+<div class="breadcrumbs"><a href="/officials">Судьи и тренеры</a> / {{ o.full_name if o else "Новый специалист" }}</div>
+<div class="page-head"><h1>{{ "Редактирование" if o else "Новый специалист" }}</h1></div>
+{% if errors %}<div class="alert danger">Проверьте поля, отмеченные красным.</div>{% endif %}
+<form class="card" method="post" novalidate>
+  <div class="form-grid">
+    {% call field("full_name", "ФИО", errors, True, cls="full") %}<input type="text" id="f-full_name" name="full_name" value="{{ v.full_name }}" maxlength="150">{% endcall %}
+    {% call field("role", "Роль", errors, True) %}
+      <select id="f-role" name="role">{% for c, l in L.OFFICIAL_ROLE.items() %}<option value="{{ c }}" {% if v.role == c %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+    {% endcall %}
+    {% call field("qualification", "Квалификационная категория", errors, True) %}<input type="text" id="f-qualification" name="qualification" value="{{ v.qualification }}" maxlength="120" placeholder="например, Судья I категории">{% endcall %}
+    {% call field("cert_expiry", "Аттестация действует до", errors, True) %}<input type="text" class="date-input" inputmode="numeric" placeholder="ДД.ММ.ГГГГ" maxlength="10" autocomplete="off" id="f-cert_expiry" name="cert_expiry" value="{{ v.cert_expiry }}">{% endcall %}
+    {% call field("club_id", "Клуб", errors) %}
+      <select id="f-club_id" name="club_id"><option value="">—</option>{% for c in clubs %}<option value="{{ c.id }}" {% if v.club_id == c.id|string %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select>
+    {% endcall %}
+    {% call field("phone", "Телефон", errors) %}<input type="tel" id="f-phone" name="phone" value="{{ v.phone }}" maxlength="30">{% endcall %}
+    {% call field("email", "E-mail", errors) %}<input type="email" id="f-email" name="email" value="{{ v.email }}" maxlength="120">{% endcall %}
+  </div>
+  <div class="form-actions"><button class="btn btn-primary" type="submit">Сохранить</button><a class="btn" href="/officials">Отмена</a></div>
+</form>
+{% endblock %}

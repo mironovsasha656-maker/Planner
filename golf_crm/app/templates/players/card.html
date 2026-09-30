@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% from "macros.html" import member_status, registration_status, payment_status, tournament_status, tee, empty %}
+{% block content %}
+<div class="breadcrumbs"><a href="/players">Игроки</a> / {{ m.full_name }}</div>
+<div class="page-head">
+  <div class="profile-head">
+    <div class="avatar">{{ m.last_name[0] }}{{ m.first_name[0] }}</div>
+    <div>
+      <h1>{{ m.full_name }}</h1>
+      <div class="sub">{{ m.license_number }} · {{ m.club.name if m.club else "без клуба" }} · {{ member_status(m.status) }}</div>
+    </div>
+  </div>
+  <div class="actions">
+    {% if can("players", True) %}
+    <form class="inline" method="post" action="/players/{{ m.id }}/status">
+      <select name="status" aria-label="Новый статус" style="width:auto">
+        {% for code, label in L.MEMBER_STATUS.items() %}{% if code != m.status %}<option value="{{ code }}">{{ label }}</option>{% endif %}{% endfor %}
+      </select>
+      <button class="btn" type="submit" data-confirm="Изменить статус членства игрока {{ m.full_name }}?">Сменить статус</button>
+    </form>
+    <a class="btn btn-primary" href="/players/{{ m.id }}/edit">Редактировать</a>
+    {% endif %}
+  </div>
+</div>
+
+<nav class="tabs">
+  <a href="?tab=profile" class="{% if tab == 'profile' %}active{% endif %}">Профиль</a>
+  <a href="?tab=handicap" class="{% if tab == 'handicap' %}active{% endif %}">Гандикап <span class="count">{{ m.rounds|length }}</span></a>
+  <a href="?tab=tournaments" class="{% if tab == 'tournaments' %}active{% endif %}">Турниры <span class="count">{{ registrations|length }}</span></a>
+  <a href="?tab=payments" class="{% if tab == 'payments' %}active{% endif %}">Платежи <span class="count">{{ m.payments|length }}</span></a>
+</nav>
+
+{% if tab == "profile" %}
+<div class="grid grid-3">
+  <div class="card span-2">
+    <h2>Профиль</h2>
+    <dl class="props">
+      <dt>Дата рождения</dt><dd>{{ m.birth_date|date }} ({{ m.age }} {{ plural(m.age, "год", "года", "лет") }})</dd>
+      <dt>Возрастная категория</dt><dd>{{ L.AGE_CATEGORY[m.age_category] }}</dd>
+      <dt>Пол</dt><dd>{{ L.GENDER[m.gender] }}</dd>
+      <dt>Телефон</dt><dd>{{ m.phone or "—" }}</dd>
+      <dt>E-mail</dt><dd>{% if m.email %}<a href="mailto:{{ m.email }}">{{ m.email }}</a>{% else %}—{% endif %}</dd>
+      <dt>Город</dt><dd>{{ m.city or "—" }}</dd>
+      <dt>Клуб</dt><dd>{% if m.club and can("clubs") %}<a href="/clubs/{{ m.club.id }}">{{ m.club.name }}</a>{% else %}{{ m.club.name if m.club else "—" }}{% endif %}</dd>
+      <dt>Член Федерации с</dt><dd>{{ m.join_date|date }}</dd>
+      <dt>Лицензия</dt><dd>{{ m.license_number }}</dd>
+      <dt>Согласие на обработку ПДн</dt><dd>{% if m.pd_consent %}<span class="badge green">Получено</span>{% else %}<span class="badge red">Нет — исключён из рассылок</span>{% endif %}</dd>
+    </dl>
+  </div>
+  <div class="stack">
+    <div class="card">
+      <div class="muted small">Индекс гандикапа</div>
+      <div class="hcp-big">{{ m.handicap_index|dec }}</div>
+      <div class="muted small mt">Обновлён: {{ m.handicap_updated_at|datetime }}</div>
+      <a class="btn btn-sm mt" href="?tab=handicap">История и раунды</a>
+    </div>
+    <div class="card">
+      <div class="muted small">Задолженность</div>
+      <div class="hcp-big" style="color: {{ 'var(--danger)' if unpaid_total else 'var(--text)' }}">{{ unpaid_total|money }}</div>
+    </div>
+  </div>
+</div>
+<div class="card mt">
+  <h2>Заметки</h2>
+  {% if m.notes %}<p style="white-space: pre-wrap">{{ m.notes }}</p>{% else %}<p class="muted">Заметок нет.{% if can("players", True) %} Добавить можно в <a href="/players/{{ m.id }}/edit">редактировании</a>.{% endif %}</p>{% endif %}
+</div>
+
+{% elif tab == "handicap" %}
+<div class="alert info">Упрощённый демонстрационный расчёт по мотивам WHS, <strong>не является сертифицированным расчётом</strong> по правилам R&amp;A/USGA. Дифференциал = (113 / Slope) × (скорректированный гросс − Course Rating); индекс — среднее лучших 8 из последних 20.</div>
+<div class="grid grid-3">
+  <div class="card">
+    <div class="muted small">Текущий индекс</div>
+    <div class="hcp-big">{{ m.handicap_index|dec }}</div>
+    <div class="muted small mt">По раундам сейчас: <strong>{{ calc_index|dec }}</strong>{% if rule %} (учтено лучших: {{ rule[0] }}{% if rule[1] %}, поправка {{ rule[1]|dec }}{% endif %}){% endif %}</div>
+    {% if calc_index is not none and m.handicap_index is not none and (calc_index - m.handicap_index)|abs > 0.05 %}<div class="badge amber mt">Индекс устарел — пересчитайте</div>{% endif %}
+    {% if can("handicap", True) %}
+    <form method="post" action="/players/{{ m.id }}/recalc" class="mt">
+      <button class="btn btn-primary" type="submit">Пересчитать гандикап</button>
+    </form>
+    {% endif %}
+  </div>
+  <div class="card span-2">
+    <div class="card-head"><h2>История индекса</h2><span class="muted small">индекс после каждого раунда и дифференциалы</span></div>
+    {% if m.rounds %}<div class="chart-box"><canvas id="hcp-history"></canvas></div>{% else %}{{ empty("Раундов пока нет") }}{% endif %}
+  </div>
+</div>
+
+{% if can("handicap", True) %}
+<form class="card mt" method="post" action="/players/{{ m.id }}/rounds">
+  <h2>Добавить раунд</h2>
+  <div class="filters" style="padding:0;border:0">
+    <div class="field"><label for="r-date">Дата</label><input type="text" class="date-input" inputmode="numeric" placeholder="ДД.ММ.ГГГГ" maxlength="10" autocomplete="off" id="r-date" name="played_on" value="{{ today|date }}" required></div>
+    <div class="field grow"><label for="r-tee">Поле и ти</label>
+      <select id="r-tee" name="tee_id" required>
+        {% for t, course, club in tees %}<option value="{{ t.id }}">{{ club.name }} — {{ course.name }}: {{ TEE_COLORS[t.color] }} (CR {{ t.course_rating|dec }}, Slope {{ t.slope_rating }}, пар {{ t.par }})</option>{% endfor %}
+      </select></div>
+    <div class="field"><label for="r-score">Гросс (скорр.)</label><input type="number" id="r-score" name="score" min="55" max="200" required style="width:110px"></div>
+    <button class="btn" type="submit">Добавить</button>
+  </div>
+</form>
+{% endif %}
+
+<div class="card flush mt">
+  <div class="card-head"><h2>Раунды</h2><span class="muted small"><span class="counted-mark"></span> — учитывается в индексе</span></div>
+  {% if table %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Дата</th><th>Поле</th><th>Ти</th><th class="th-num">CR / Slope</th><th class="th-num">Гросс</th><th class="th-num">Дифференциал</th><th>Источник</th></tr></thead>
+    <tbody>
+    {% for row in table %}{% set r = row.round %}
+      <tr class="{% if not row.in_window %}row-muted{% endif %}">
+        <td class="nowrap">{{ r.played_on|date }}</td>
+        <td>{{ r.tee.course.club.name }} — {{ r.tee.course.name }}</td>
+        <td>{{ tee(r.tee.color) }}</td>
+        <td class="num">{{ r.tee.course_rating|dec }} / {{ r.tee.slope_rating }}</td>
+        <td class="num">{{ r.adjusted_gross }}</td>
+        <td class="num {% if row.counted %}counted{% endif %}">{{ r.differential|dec }}{% if row.counted %}<span class="counted-mark" title="Учитывается"></span>{% endif %}</td>
+        <td>{% if r.round_no %}Турнир, раунд {{ r.round_no }}{% else %}Частный раунд{% endif %}{% if not row.in_window %} <span class="muted small">(старше последних {{ window }})</span>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}{{ empty("Раундов нет", "Добавьте раунды, чтобы рассчитать индекс.") }}{% endif %}
+</div>
+
+{% elif tab == "tournaments" %}
+<div class="card flush">
+  {% if registrations %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Турнир</th><th>Даты</th><th>Статус турнира</th><th>Заявка</th><th>Ти</th><th class="th-num">Гросс</th><th class="th-num">Нетто</th><th class="th-num">Очки</th><th class="th-num">Место</th></tr></thead>
+    <tbody>
+    {% for reg in registrations %}{% set t = reg.tournament %}{% set res = reg.result %}
+      <tr>
+        <td>{% if can("tournaments") %}<a href="/tournaments/{{ t.id }}">{{ t.name }}</a>{% else %}{{ t.name }}{% endif %}</td>
+        <td class="nowrap">{{ t.start_date|date }}</td>
+        <td>{{ tournament_status(t.status) }}</td>
+        <td>{{ registration_status(reg.status) }}</td>
+        <td>{{ tee(reg.tee) }}</td>
+        <td class="num">{{ res.total_gross if res and res.total_gross else "—" }}</td>
+        <td class="num">{{ res.total_net if res and res.total_net is not none else "—" }}</td>
+        <td class="num">{{ res.stableford_points if res and res.stableford_points is not none else "—" }}</td>
+        <td class="num"><strong>{{ res.position if res and res.position else "—" }}</strong>{% if res and res.category_position %}<div class="muted small">в категории: {{ res.category_position }}</div>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}{{ empty("Игрок ещё не участвовал в турнирах", icon_name="trophy") }}{% endif %}
+</div>
+
+{% elif tab == "payments" %}
+<div class="card flush">
+  {% if m.payments %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>№</th><th>Тип</th><th>Назначение</th><th class="th-num">Сумма</th><th>Выставлен</th><th>Срок</th><th>Оплачен</th><th>Способ</th><th>Статус</th></tr></thead>
+    <tbody>
+    {% for p in m.payments %}
+      <tr class="{% if p.status == 'overdue' %}row-danger{% endif %}">
+        <td>{{ p.id }}</td>
+        <td>{{ L.PAYMENT_TYPE[p.type] }}</td>
+        <td>{{ p.comment }}</td>
+        <td class="num">{{ p.amount|money }}</td>
+        <td class="nowrap">{{ p.issued_on|date }}</td>
+        <td class="nowrap">{{ p.due_date|date }}</td>
+        <td class="nowrap">{{ p.paid_on|date }}</td>
+        <td>{{ L.PAYMENT_METHOD[p.method] }}</td>
+        <td>{{ payment_status(p.status) }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% if can("finance", True) %}<div class="table-foot"><span>Отметить оплату можно в разделе «Финансы».</span><a class="btn btn-sm" href="/finance?q={{ m.license_number }}">Открыть в финансах</a></div>{% endif %}
+  {% else %}{{ empty("Платежей нет", icon_name="wallet") }}{% endif %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if tab == "handicap" and m.rounds %}
+<script>
+(function () {
+  var c = GolfCRM.colors;
+  var d = {{ chart|tojson }};
+  GolfCRM.chart("hcp-history", {
+    data: {
+      labels: d.labels,
+      datasets: [
+        { type: "line", label: "Индекс гандикапа", data: d.index, borderColor: c.accent, backgroundColor: c.accent, tension: .25, spanGaps: true, borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, fill: false },
+        { type: "scatter", label: "Дифференциал раунда", data: d.diffs, backgroundColor: c.series[1], borderColor: c.surface, borderWidth: 1, pointRadius: 4, pointHoverRadius: 6 }
+      ]
+    },
+    options: {
+      interaction: { mode: "index", intersect: false },
+      scales: { y: { title: { display: true, text: "Значение" }, grid: { color: c.grid }, border: { display: false } }, x: { ticks: { maxTicksLimit: 8 }, grid: { display: false }, border: { color: c.grid } } },
+      plugins: { tooltip: { callbacks: { label: function (ctx) { return ctx.dataset.label + ": " + (ctx.parsed.y === null ? "—" : ctx.parsed.y.toFixed(1).replace(".", ",")); } } } }
+    }
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% from "macros.html" import field %}
+{% block content %}
+<div class="breadcrumbs"><a href="/players">Игроки</a>{% if member %} / <a href="/players/{{ member.id }}">{{ member.full_name }}</a>{% endif %}</div>
+<div class="page-head"><h1>{{ "Редактирование игрока" if member else "Новый игрок" }}</h1></div>
+
+{% if errors %}<div class="alert danger">Проверьте поля, отмеченные красным.</div>{% endif %}
+
+<form class="card" method="post" novalidate>
+  <div class="form-grid">
+    {% call field("last_name", "Фамилия", errors, True) %}<input type="text" id="f-last_name" name="last_name" value="{{ v.last_name }}" maxlength="60" required>{% endcall %}
+    {% call field("first_name", "Имя", errors, True) %}<input type="text" id="f-first_name" name="first_name" value="{{ v.first_name }}" maxlength="60" required>{% endcall %}
+    {% call field("middle_name", "Отчество", errors) %}<input type="text" id="f-middle_name" name="middle_name" value="{{ v.middle_name }}" maxlength="60">{% endcall %}
+    {% call field("birth_date", "Дата рождения", errors, True) %}<input type="text" class="date-input" inputmode="numeric" placeholder="ДД.ММ.ГГГГ" maxlength="10" autocomplete="off" id="f-birth_date" name="birth_date" value="{{ v.birth_date }}" required>{% endcall %}
+    {% call field("gender", "Пол", errors, True) %}
+      <select id="f-gender" name="gender">{% for code, label in L.GENDER.items() %}<option value="{{ code }}" {% if v.gender == code %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    {% endcall %}
+    {% call field("club_id", "Клуб", errors) %}
+      <select id="f-club_id" name="club_id"><option value="">Без клуба</option>{% for c in clubs %}<option value="{{ c.id }}" {% if v.club_id == c.id|string %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select>
+    {% endcall %}
+    {% call field("phone", "Телефон", errors, help="Например: +7 (916) 123-45-67") %}<input type="tel" id="f-phone" name="phone" value="{{ v.phone }}" maxlength="30">{% endcall %}
+    {% call field("email", "E-mail", errors) %}<input type="email" id="f-email" name="email" value="{{ v.email }}" maxlength="120">{% endcall %}
+    {% call field("city", "Город", errors) %}<input type="text" id="f-city" name="city" value="{{ v.city }}" maxlength="80">{% endcall %}
+    {% call field("status", "Статус членства", errors, True) %}
+      <select id="f-status" name="status">{% for code, label in L.MEMBER_STATUS.items() %}<option value="{{ code }}" {% if v.status == code %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    {% endcall %}
+    {% call field("join_date", "Дата вступления", errors, True) %}<input type="text" class="date-input" inputmode="numeric" placeholder="ДД.ММ.ГГГГ" maxlength="10" autocomplete="off" id="f-join_date" name="join_date" value="{{ v.join_date }}" required>{% endcall %}
+    {% call field("handicap_index", "Индекс гандикапа", errors, help="От 0,0 до 54,0. После 3 раундов пересчитывается автоматически по кнопке.") %}<input type="text" id="f-handicap_index" name="handicap_index" value="{{ v.handicap_index }}" inputmode="decimal" maxlength="6" placeholder="например, 24,5">{% endcall %}
+    {% call field("notes", "Заметки", errors, cls="full") %}<textarea id="f-notes" name="notes" maxlength="2000">{{ v.notes }}</textarea>{% endcall %}
+    <div class="field full {% if errors.get('pd_consent') %}has-error{% endif %}">
+      <label class="checkbox"><input type="checkbox" name="pd_consent" {% if v.pd_consent %}checked{% endif %}> <span>Получено согласие на обработку персональных данных (152-ФЗ). Без согласия игрок не попадает в рассылки.</span></label>
+    </div>
+  </div>
+  {% if member %}<p class="muted small mt">Номер лицензии: {{ member.license_number }} (присваивается автоматически и не меняется).</p>
+  {% else %}<p class="muted small mt">Номер лицензии присвоится автоматически. Будет выставлен счёт на членский взнос {{ today.year }} года.</p>{% endif %}
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">Сохранить</button>
+    <a class="btn" href="{{ '/players/%d' % member.id if member else '/players' }}">Отмена</a>
+  </div>
+</form>
+{% endblock %}

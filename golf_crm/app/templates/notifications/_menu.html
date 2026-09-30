@@ -1,0 +1,16 @@
+<div class="head"><span>Уведомления{% if unread %} <span class="muted small">· {{ unread }} новых</span>{% endif %}</span>
+  {% if unread %}<form method="post" action="/notifications/read-all"><button class="btn btn-sm btn-ghost" type="submit">Прочитать все</button></form>{% endif %}
+</div>
+{% if items %}
+<div class="items">
+{% for n in items %}
+<a class="notif-item {% if not n.is_read %}unread{% endif %} {% if n.type == 'task_overdue' %}overdue{% endif %}" href="/notifications/{{ n.id }}/open" role="menuitem">
+  <span class="mark"></span>
+  <span><span class="text">{{ n.text }}</span><div class="when">{{ L.NOTIFICATION_TYPE.get(n.type, "") }} · {{ n.created_at.strftime("%d.%m.%Y %H:%M") }}</div></span>
+</a>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty" style="padding:24px">Уведомлений пока нет</div>
+{% endif %}
+<div class="foot"><a href="/notifications">Все уведомления</a></div>

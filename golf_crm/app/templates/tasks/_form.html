@@ -1,0 +1,59 @@
+{% from "macros.html" import field, icon %}
+{# Task form rendered inside the modal (#modal-content). Also included by form_page.html. #}
+{% set action = "/tasks/%d/edit" % task.id if task else "/tasks/new" %}
+<form method="post" action="{{ action }}" hx-post="{{ action }}" hx-target="#modal-content" hx-swap="innerHTML" novalidate>
+  <div class="modal-head">
+    <h2 id="modal-title">{{ "Редактирование задачи" if task else "Новая задача" }}</h2>
+    <button type="button" class="close-btn" data-close aria-label="Закрыть">×</button>
+  </div>
+  <div class="modal-body">
+    {% if errors %}<div class="alert danger" role="alert">Проверьте поля, отмеченные красным.</div>{% endif %}
+    <div class="form-grid">
+      {% call field("title", "Название", errors, True, cls="full") %}
+        <input type="text" id="f-title" name="title" value="{{ v.title }}" maxlength="200" autofocus required placeholder="Кратко: что нужно сделать">
+      {% endcall %}
+      {% call field("description", "Описание", errors, True, cls="full") %}
+        <textarea id="f-description" name="description" maxlength="5000" required placeholder="Подробности, ожидаемый результат, контакты">{{ v.description }}</textarea>
+      {% endcall %}
+      {% call field("assignee_id", "Исполнитель", errors, True) %}
+        <select id="f-assignee_id" name="assignee_id" required>
+          <option value="">— выберите менеджера —</option>
+          {% for m in managers %}<option value="{{ m.id }}" {% if v.assignee_id == m.id|string %}selected{% endif %}>{{ m.name }} · {{ m.position }}</option>{% endfor %}
+        </select>
+      {% endcall %}
+      {% call field("priority", "Приоритет", errors, True) %}
+        <select id="f-priority" name="priority">
+          {% for code, label in L.TASK_PRIORITY.items() %}<option value="{{ code }}" {% if (v.priority or "normal") == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      {% endcall %}
+      <div class="full">
+        <div class="inline-fields">
+          {% call field("due_date", "Срок выполнения: дата", errors, True) %}
+            <input type="text" class="date-input" inputmode="numeric" placeholder="ДД.ММ.ГГГГ" maxlength="10" autocomplete="off" id="f-due_date" name="due_date" value="{{ v.due_date }}" required>
+          {% endcall %}
+          {% call field("due_time", "Время", errors, True) %}
+            <input type="text" class="time-input" inputmode="numeric" placeholder="ЧЧ:ММ" maxlength="5" autocomplete="off" id="f-due_time" name="due_time" value="{{ v.due_time }}" required>
+          {% endcall %}
+        </div>
+        <div class="help muted small" style="margin-top:4px">Время московское (МСК).</div>
+      </div>
+      <div class="field full combo {% if errors.get('related') %}has-error{% endif %}">
+        <label for="f-related-search">Связано с <span class="muted">(необязательно)</span></label>
+        <input type="hidden" name="related" value="{{ v.related }}">
+        <div class="combo-chosen {% if not v.related %}hidden{% endif %}">
+          <span class="combo-label">{{ v.related_label }}</span>
+          <button type="button" class="close-btn" data-clear-pick aria-label="Убрать связь">×</button>
+        </div>
+        <input type="search" id="f-related-search" class="combo-search {% if v.related %}hidden{% endif %}" name="rq" autocomplete="off" maxlength="100"
+               placeholder="Найти турнир, игрока или клуб" hx-get="/tasks/related-search" hx-trigger="input changed delay:200ms, focus"
+               hx-target="next .combo-results" hx-swap="innerHTML">
+        <div class="combo-results" role="listbox"></div>
+        {% if errors.get('related') %}<div class="error">{{ errors.related }}</div>{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="modal-foot">
+    <button type="button" class="btn btn-ghost" data-close>Отмена</button>
+    <button type="submit" class="btn btn-primary">{{ "Сохранить" if task else "Создать задачу" }}</button>
+  </div>
+</form>
