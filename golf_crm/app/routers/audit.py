@@ -8,14 +8,14 @@ from sqlalchemy.orm import Session
 
 from app import config
 from app.db import get_session
-from app.labels import AUDIT_ACTIONS, ENTITY_TYPES, ROLES
+from app.labels import AUDIT_ACTIONS, ENTITY_TYPES
 from app.models import AuditLog
 from app.web import render, require
 
 router = APIRouter(prefix="/audit")
 
 ENTITY_LINKS = {"member": "/players/{}", "tournament": "/tournaments/{}", "message": "/mailings/{}",
-                "club": "/clubs/{}"}
+                "club": "/clubs/{}", "task": "/tasks/{}"}
 
 
 @router.get("")
@@ -23,7 +23,8 @@ def audit_page(request: Request, s: Session = Depends(get_session), _=Depends(re
     q = request.query_params
     params = {"user": q.get("user", ""), "action": q.get("action", "")}
     stmt = select(AuditLog)
-    if params["user"] in ROLES.values():
+    users = list(s.scalars(select(AuditLog.user).distinct().order_by(AuditLog.user)))
+    if params["user"] in users:
         stmt = stmt.where(AuditLog.user == params["user"])
     if params["action"] in AUDIT_ACTIONS:
         stmt = stmt.where(AuditLog.action == params["action"])
@@ -34,7 +35,7 @@ def audit_page(request: Request, s: Session = Depends(get_session), _=Depends(re
     entries = list(s.scalars(stmt.order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
                              .offset((page - 1) * config.PAGE_SIZE).limit(config.PAGE_SIZE)))
     ctx = dict(active="audit", title="Журнал действий", entries=entries, params=params, total=total, page=page,
-               pages=pages, users=list(ROLES.values()), links=ENTITY_LINKS, entity_types=ENTITY_TYPES)
+               pages=pages, users=users, links=ENTITY_LINKS, entity_types=ENTITY_TYPES)
     if request.headers.get("HX-Request") == "true" and request.headers.get("HX-Target") == "results":
         return render(request, "audit/_table.html", **ctx)
     return render(request, "audit/index.html", **ctx)

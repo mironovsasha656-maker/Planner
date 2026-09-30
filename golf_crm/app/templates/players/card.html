@@ -56,7 +56,7 @@
     </div>
     <div class="card">
       <div class="muted small">Задолженность</div>
-      <div class="hcp-big" style="color: {{ 'var(--red-700)' if unpaid_total else 'var(--green-700)' }}">{{ unpaid_total|money }}</div>
+      <div class="hcp-big" style="color: {{ 'var(--danger)' if unpaid_total else 'var(--text)' }}">{{ unpaid_total|money }}</div>
     </div>
   </div>
 </div>
@@ -183,13 +183,13 @@
     data: {
       labels: d.labels,
       datasets: [
-        { type: "line", label: "Индекс гандикапа", data: d.index, borderColor: c.green, backgroundColor: c.greenFill, tension: .25, spanGaps: true, pointRadius: 2, fill: false },
-        { type: "scatter", label: "Дифференциал раунда", data: d.diffs, backgroundColor: c.amber, pointRadius: 3 }
+        { type: "line", label: "Индекс гандикапа", data: d.index, borderColor: c.accent, backgroundColor: c.accent, tension: .25, spanGaps: true, borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, fill: false },
+        { type: "scatter", label: "Дифференциал раунда", data: d.diffs, backgroundColor: c.series[1], borderColor: c.surface, borderWidth: 1, pointRadius: 4, pointHoverRadius: 6 }
       ]
     },
     options: {
       interaction: { mode: "index", intersect: false },
-      scales: { y: { reverse: false, title: { display: true, text: "Значение" }, grid: { color: "#eff2f0" } }, x: { ticks: { maxTicksLimit: 8 }, grid: { display: false } } },
+      scales: { y: { title: { display: true, text: "Значение" }, grid: { color: c.grid }, border: { display: false } }, x: { ticks: { maxTicksLimit: 8 }, grid: { display: false }, border: { color: c.grid } } },
       plugins: { tooltip: { callbacks: { label: function (ctx) { return ctx.dataset.label + ": " + (ctx.parsed.y === null ? "—" : ctx.parsed.y.toFixed(1).replace(".", ",")); } } } }
     }
   });

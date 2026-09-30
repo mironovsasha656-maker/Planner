@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Iterable, Optional, Sequence
+from app import timeutil as msk
 
 MIN_INDEX = 0.0
 MAX_INDEX = 54.0
@@ -122,12 +123,10 @@ def recalculate_member(member) -> Optional[float]:
     Returns the new index, or None when there are fewer than 3 rounds (the
     manually entered initial index is then kept unchanged).
     """
-    from datetime import datetime
-
     ordered = sorted(member.rounds, key=lambda r: (r.played_on, r.id or 0))
     value = handicap_index([r.differential for r in ordered])
     if value is None:
         return None
     member.handicap_index = value
-    member.handicap_updated_at = datetime.now().replace(microsecond=0)
+    member.handicap_updated_at = msk.now().replace(microsecond=0)
     return value

@@ -1,0 +1,7 @@
+{% if items %}
+{% for kind, ident, name, label in items %}
+<button type="button" role="option" data-pick="{{ kind }}:{{ ident }}" data-label="{{ label }}: {{ name }}"><span class="kind">{{ label }}</span><span>{{ name }}</span></button>
+{% endfor %}
+{% else %}
+<div class="none">Ничего не найдено{% if q %} по запросу «{{ q }}»{% endif %}</div>
+{% endif %}

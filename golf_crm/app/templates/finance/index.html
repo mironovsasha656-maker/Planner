@@ -52,7 +52,7 @@
         <td class="small">{{ m.club.name if m.club else "—" }}</td>
         <td class="small">{{ m.phone }}<br>{{ m.email }}</td>
         <td class="num">{{ p.amount|money }}</td>
-        <td class="nowrap">{{ p.due_date|date }}{% if p.status == 'overdue' %}<div class="small" style="color: var(--red-700)">просрочка {{ (today - p.due_date).days }} {{ plural((today - p.due_date).days, "день", "дня", "дней") }}</div>{% endif %}</td>
+        <td class="nowrap">{{ p.due_date|date }}{% if p.status == 'overdue' %}<div class="small" style="color: var(--danger)">просрочка {{ (today - p.due_date).days }} {{ plural((today - p.due_date).days, "день", "дня", "дней") }}</div>{% endif %}</td>
         <td>{{ payment_status(p.status) }}</td>
         <td>{{ member_status(m.status) }}</td>
         {% if can("finance", True) %}<td class="actions-cell">
@@ -90,9 +90,10 @@
 <script>
 (function () {
   var d = {{ chart|tojson }};
-  var colors = GolfCRM.colors.palette;
+  var colors = GolfCRM.colors.series;
   var datasets = d.series.map(function (series, i) {
-    return { label: series.label, data: series.data, backgroundColor: [colors[3], colors[2], colors[0]][i], borderRadius: 3, stack: "s" };
+    return { label: series.label, data: series.data, backgroundColor: colors[i], borderColor: GolfCRM.colors.surface,
+             borderWidth: { top: 2 }, borderSkipped: false, borderRadius: 3, stack: "s", maxBarThickness: 40 };
   });
   GolfCRM.chart("finance-chart", {
     type: "bar",
@@ -100,8 +101,8 @@
     options: {
       interaction: { mode: "index", intersect: false },
       scales: {
-        x: { stacked: true, grid: { display: false } },
-        y: { stacked: true, grid: { color: "#eff2f0" }, ticks: { callback: function (v) { return GolfCRM.formatNumber(v); } } }
+        x: { stacked: true, grid: { display: false }, border: { color: GolfCRM.colors.grid } },
+        y: { stacked: true, grid: { color: GolfCRM.colors.grid }, border: { display: false }, ticks: { callback: function (v) { return GolfCRM.formatNumber(v); } } }
       },
       plugins: { tooltip: { callbacks: { label: function (ctx) { return ctx.dataset.label + ": " + GolfCRM.formatRub(ctx.parsed.y); } } } }
     }

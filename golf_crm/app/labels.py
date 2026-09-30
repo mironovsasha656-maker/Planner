@@ -79,6 +79,7 @@ AUDIT_ACTIONS = {
     "mailing": "Рассылка",
     "export": "Экспорт",
     "role": "Смена роли",
+    "task": "Задачи",
 }
 
 ENTITY_TYPES = {
@@ -91,6 +92,7 @@ ENTITY_TYPES = {
     "message": "Рассылка",
     "round": "Раунд",
     "session": "Сеанс",
+    "task": "Задача",
 }
 
 MONTHS = [
@@ -103,3 +105,20 @@ MONTHS_GENITIVE = [
     "июля", "августа", "сентября", "октября", "ноября", "декабря",
 ]
 WEEKDAYS_SHORT = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
+
+TASK_PRIORITY = {"low": "Низкий", "normal": "Обычный", "high": "Высокий"}
+TASK_STATUS = {
+    "new": "Новая",
+    "in_progress": "В работе",
+    "done": "Выполнена",
+    "cancelled": "Отменена",
+    "overdue": "Просрочена",  # derived, never stored
+}
+NOTIFICATION_TYPE = {
+    "task_assigned": "Новая задача",
+    "task_started": "Задача взята в работу",
+    "task_completed": "Задача выполнена",
+    "task_overdue": "Задача просрочена",
+    "task_cancelled": "Задача отменена",
+}
+RELATED_TYPE = {"tournament": "Турнир", "member": "Игрок", "club": "Клуб"}

@@ -17,6 +17,7 @@ from app.services import audit
 from app.services import formatting as f
 from app.services import payments as pay
 from app.web import back_url, redirect, render, require
+from app import timeutil as msk
 
 router = APIRouter(prefix="/finance")
 
@@ -83,7 +84,7 @@ def monthly_summary(s: Session, today: date):
 
 @router.get("")
 def finance_page(request: Request, s: Session = Depends(get_session), _=Depends(require("finance"))):
-    today = date.today()
+    today = msk.today()
     tab = request.query_params.get("tab", "payments")
     if tab not in ("payments", "debtors", "summary"):
         tab = "payments"
@@ -132,7 +133,7 @@ def finance_export(request: Request, s: Session = Depends(get_session), role=Dep
     audit.log(s, role, "export", "payment", None, f"Экспорт платежей в CSV ({len(rows)} записей)")
     s.commit()
     return Response(data, media_type="text/csv; charset=utf-8",
-                    headers={"Content-Disposition": f'attachment; filename="payments_{date.today():%Y%m%d}.csv"'})
+                    headers={"Content-Disposition": f'attachment; filename="payments_{msk.today():%Y%m%d}.csv"'})
 
 
 @router.post("/payments/{pid}/paid")
@@ -146,7 +147,7 @@ async def mark_paid(pid: int, request: Request, s: Session = Depends(get_session
     form = await request.form()
     method = form.get("method") if form.get("method") in PAYMENT_METHOD else None
     was_unpaid = p.member.status == "unpaid"
-    pay.mark_paid(p, date.today(), method)
+    pay.mark_paid(p, msk.today(), method)
     msg = f"Платёж №{p.id} ({p.member.full_name}, {f.fmt_money(p.amount)}) отмечен как оплаченный."
     if was_unpaid and p.member.status == "active":
         msg += " Статус игрока изменён на «Активен»."
@@ -165,7 +166,7 @@ def payment_form(request, s, values, errors, status_code=200):
 
 @router.get("/payments/new")
 def payment_new(request: Request, s: Session = Depends(get_session), _=Depends(require("finance", True))):
-    today = date.today()
+    today = msk.today()
     values = {"type": "membership", "issued_on": f.fmt_date(today),
               "due_date": f.fmt_date(today + timedelta(days=config.MEMBERSHIP_PAYMENT_TERM_DAYS)),
               "method": "invoice", "status": "pending", "member_id": request.query_params.get("member", "")}
@@ -175,7 +176,7 @@ def payment_new(request: Request, s: Session = Depends(get_session), _=Depends(r
 @router.post("/payments/new")
 async def payment_create(request: Request, s: Session = Depends(get_session), role=Depends(require("finance", True))):
     form = await request.form()
-    today = date.today()
+    today = msk.today()
     v = {k: (form.get(k) or "").strip() for k in
          ("member_id", "type", "amount", "issued_on", "due_date", "method", "status", "comment")}
     e: dict[str, str] = {}

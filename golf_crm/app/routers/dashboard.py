@@ -9,8 +9,9 @@ from sqlalchemy.orm import Session
 from app import config
 from app.db import get_session
 from app.labels import MONTHS_SHORT
-from app.models import Club, Member, Official, Payment, Tournament
-from app.web import can, render, require
+from app.models import Club, Member, Official, Payment, Task, Tournament
+from app.web import can, current_user, render, require
+from app import timeutil as msk
 
 router = APIRouter()
 
@@ -40,7 +41,7 @@ def handicap_buckets(values: list[float]) -> list[int]:
 
 @router.get("/")
 def dashboard(request: Request, s: Session = Depends(get_session), _=Depends(require("dashboard"))):
-    today = date.today()
+    today = msk.today()
     members = list(s.scalars(select(Member)))
     total = len(members)
     active = sum(1 for m in members if m.status == "active")
@@ -84,8 +85,24 @@ def dashboard(request: Request, s: Session = Depends(get_session), _=Depends(req
     ))
     full = [t for t in upcoming if t.status == "registration" and t.is_full]
 
+    now = msk.now()
+    user = current_user(request)
+    task_stmt = select(Task)
+    if not user["is_director"]:
+        task_stmt = task_stmt.where(Task.assignee_id == user["id"])
+    tasks = list(s.scalars(task_stmt))
+    open_tasks = sorted((t for t in tasks if t.is_open), key=lambda t: t.due_at)
+    week_ago = now - timedelta(days=7)
+    task_summary = {
+        "open": len(open_tasks),
+        "overdue": [t for t in open_tasks if t.is_overdue(now)],
+        "done_week": sum(1 for t in tasks if t.status == "done" and t.completed_at >= week_ago),
+        "early_week": sum(1 for t in tasks if t.is_early and t.completed_at >= week_ago),
+        "next": [t for t in open_tasks if not t.is_overdue(now)][:4],
+    }
+
     return render(
-        request, "dashboard.html", active="dashboard", title="Дашборд",
+        request, "dashboard.html", task_summary=task_summary, now=now, active="dashboard", title="Дашборд",
         total=total, active_count=active, unpaid=unpaid, upcoming=upcoming,
         revenue_month=revenue_month, revenue_year=revenue_year, growth=growth, hcp=hcp,
         club_rows=club_rows, overdue_payments=overdue_payments,

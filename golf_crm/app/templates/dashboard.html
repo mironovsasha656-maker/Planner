@@ -19,9 +19,35 @@
   {% endif %}
 </div>
 
+{% set ts = task_summary %}
+<div class="card mb" style="padding:16px 20px">
+  <div class="card-head" style="margin-bottom:10px">
+    <h2>{{ "Задачи команды" if user.is_director else "Мои задачи" }}</h2>
+    <div class="actions">
+      <span class="muted small">открыто {{ ts.open }} · выполнено за неделю {{ ts.done_week }}{% if ts.early_week %} (досрочно {{ ts.early_week }}){% endif %}</span>
+      {% if ts.overdue %}<span class="badge red dot">просрочено {{ ts.overdue|length }}</span>{% endif %}
+      <a class="btn btn-sm" href="{{ '/tasks' if user.is_director else '/tasks/my' }}">Все задачи</a>
+    </div>
+  </div>
+  {% set upcoming_tasks = ts.overdue + ts.next %}
+  {% if upcoming_tasks %}
+  <ul class="list">
+    {% for t in upcoming_tasks[:5] %}
+    <li>
+      <div><a href="/tasks/{{ t.id }}" hx-get="/tasks/{{ t.id }}/panel" hx-target="#panel-content" onclick="event.preventDefault()">{{ t.title }}</a>
+        <div class="meta">{% if user.is_director %}{{ t.assignee.name }} · {% endif %}срок {{ t.due_at.strftime("%d.%m.%Y %H:%M") }}</div></div>
+      {% if t.is_overdue(now) %}<span class="badge red dot">Просрочена</span>{% elif t.status == "in_progress" %}<span class="badge green">В работе</span>{% else %}<span class="badge">Новая</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted" style="margin:0">Открытых задач нет.</p>
+  {% endif %}
+</div>
+
 <div class="grid grid-3 mb">
   <div class="card span-2">
-    <div class="card-head"><h2>Динамика численности</h2><span class="muted small">последние 12 месяцев</span></div>
+    <div class="card-head"><h2>Численность игроков</h2><span class="muted small">последние 12 месяцев · в подсказке — новые за месяц</span></div>
     <div class="chart-box"><canvas id="growth-chart" aria-label="График численности игроков"></canvas></div>
   </div>
   <div class="card">
@@ -99,19 +125,25 @@
   var c = GolfCRM.colors;
   var growth = {{ growth|tojson }};
   GolfCRM.chart("growth-chart", {
+    type: "line",
     data: {
       labels: growth.labels,
-      datasets: [
-        { type: "line", label: "Всего игроков", data: growth.total, borderColor: c.green, backgroundColor: c.greenFill, fill: true, tension: .3, yAxisID: "y" },
-        { type: "bar", label: "Новые за месяц", data: growth["new"], backgroundColor: c.greenLight, borderRadius: 4, yAxisID: "y1" }
-      ]
+      datasets: [{ label: "Игроков в реестре", data: growth.total, borderColor: c.accent, backgroundColor: c.accentSoft,
+                   fill: true, tension: .3, borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, pointHoverBorderWidth: 2,
+                   pointHoverBorderColor: c.surface, pointHoverBackgroundColor: c.accent }]
     },
     options: {
       interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: {
+          label: function (ctx) { return "Всего игроков: " + GolfCRM.formatNumber(ctx.parsed.y); },
+          afterLabel: function (ctx) { return "Новых за месяц: " + growth["new"][ctx.dataIndex]; }
+        } }
+      },
       scales: {
-        y: { position: "left", title: { display: true, text: "Всего" }, grid: { color: "#eff2f0" } },
-        y1: { position: "right", beginAtZero: true, title: { display: true, text: "Новые" }, grid: { display: false }, ticks: { precision: 0 } },
-        x: { grid: { display: false } }
+        y: { grid: { color: c.grid }, border: { display: false }, ticks: { precision: 0 } },
+        x: { grid: { display: false }, border: { color: c.grid } }
       }
     }
   });
@@ -119,11 +151,15 @@
     type: "bar",
     data: {
       labels: ["0–10", "10–20", "20–30", "30+"],
-      datasets: [{ label: "Игроков", data: {{ hcp|tojson }}, backgroundColor: c.palette.slice(0, 4), borderRadius: 6 }]
+      datasets: [{ label: "Игроков", data: {{ hcp|tojson }}, backgroundColor: c.accent, hoverBackgroundColor: c.series[0],
+                   borderRadius: 4, maxBarThickness: 44 }]
     },
     options: {
       plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: "#eff2f0" } }, x: { grid: { display: false }, title: { display: true, text: "Индекс гандикапа" } } }
+      scales: {
+        y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: c.grid }, border: { display: false } },
+        x: { grid: { display: false }, border: { color: c.grid }, title: { display: true, text: "Индекс гандикапа" } }
+      }
     }
   });
 })();

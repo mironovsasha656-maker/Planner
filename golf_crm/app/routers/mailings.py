@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
@@ -10,11 +9,12 @@ from sqlalchemy.orm import Session
 
 from app import config
 from app.db import get_session
-from app.labels import ROLES, SEGMENTS
+from app.labels import SEGMENTS
 from app.models import Club, Message, Tournament
 from app.services import audit
 from app.services.segmentation import SegmentError, resolve
-from app.web import get_role, redirect, render, require
+from app.web import current_user, redirect, render, require
+from app import timeutil as msk
 
 router = APIRouter(prefix="/mailings")
 
@@ -62,7 +62,7 @@ def mailing_new(request: Request, s: Session = Depends(get_session), _=Depends(r
 
 def preview_data(s: Session, segment: str, param: int | None):
     try:
-        return {"result": resolve(s, segment, param, date.today()), "error": None}
+        return {"result": resolve(s, segment, param, msk.today()), "error": None}
     except SegmentError as exc:
         return {"result": None, "error": str(exc)}
 
@@ -99,8 +99,8 @@ async def mailing_send(request: Request, s: Session = Depends(get_session), role
                       v=v, errors=errors, clubs=clubs, tournaments=tournaments, preview=preview)
     result = preview["result"]
     msg = Message(subject=v["subject"], body=v["body"], segment=segment, segment_param=param,
-                  segment_label=result.label, sent_at=datetime.now().replace(microsecond=0), status="sent",
-                  recipients_count=len(result.recipients), sent_by=ROLES[get_role(request)])
+                  segment_label=result.label, sent_at=msk.now().replace(microsecond=0), status="sent",
+                  recipients_count=len(result.recipients), sent_by=current_user(request)["label"])
     s.add(msg)
     s.flush()
     log = mail_logger()

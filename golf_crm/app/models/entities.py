@@ -19,6 +19,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app import config
 from app.db import Base
+from app import timeutil as msk
 
 
 def age_on(birth: date, on: date) -> int:
@@ -131,11 +132,11 @@ class Member(Base):
 
     @property
     def age(self) -> int:
-        return age_on(self.birth_date, date.today())
+        return age_on(self.birth_date, msk.today())
 
     @property
     def age_category(self) -> str:
-        return age_category(self.birth_date, date.today())
+        return age_category(self.birth_date, msk.today())
 
 
 class Round(Base):
@@ -282,7 +283,7 @@ class Official(Base):
 
     @property
     def days_to_expiry(self) -> int:
-        return (self.cert_expiry - date.today()).days
+        return (self.cert_expiry - msk.today()).days
 
 
 class Message(Base):
@@ -310,3 +311,87 @@ class AuditLog(Base):
     entity_type: Mapped[str] = mapped_column(String(20))
     entity_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     description: Mapped[str] = mapped_column(String(500))
+
+
+class User(Base):
+    """Demo user (no authentication). kind: director / manager; role maps to section access."""
+
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100))
+    kind: Mapped[str] = mapped_column(String(20))
+    role: Mapped[str] = mapped_column(String(20))
+    position: Mapped[str] = mapped_column(String(100), default="")
+
+    @property
+    def is_director(self) -> bool:
+        return self.kind == "director"
+
+    @property
+    def label(self) -> str:
+        prefix = "Директор" if self.is_director else "Менеджер"
+        return f"{prefix}: {self.name}"
+
+    @property
+    def initials(self) -> str:
+        return "".join(p[0] for p in self.name.split()[:2])
+
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String(200))
+    description: Mapped[str] = mapped_column(Text)
+    creator_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    assignee_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    priority: Mapped[str] = mapped_column(String(10), default="normal")
+    status: Mapped[str] = mapped_column(String(15), default="new")
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+    due_at: Mapped[datetime] = mapped_column(DateTime)
+    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    cancelled_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    completion_comment: Mapped[str] = mapped_column(Text, default="")
+    related_type: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)  # tournament / member / club
+    related_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
+    creator: Mapped[User] = relationship(foreign_keys=[creator_id])
+    assignee: Mapped[User] = relationship(foreign_keys=[assignee_id])
+
+    @property
+    def is_open(self) -> bool:
+        return self.status in ("new", "in_progress")
+
+    def is_overdue(self, now: Optional[datetime] = None) -> bool:
+        """Derived state, never stored: open and past its deadline."""
+        return self.is_open and self.due_at < (now or msk.now())
+
+    @property
+    def overdue(self) -> bool:
+        return self.is_overdue()
+
+    @property
+    def is_early(self) -> bool:
+        return self.status == "done" and self.completed_at is not None and self.completed_at < self.due_at
+
+    @property
+    def display_status(self) -> str:
+        """Status code for the UI, including the derived "overdue"."""
+        return "overdue" if self.overdue else self.status
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    recipient_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    type: Mapped[str] = mapped_column(String(20))
+    task_id: Mapped[Optional[int]] = mapped_column(ForeignKey("tasks.id"), nullable=True)
+    text: Mapped[str] = mapped_column(String(500))
+    created_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    recipient: Mapped[User] = relationship()
+    task: Mapped[Optional[Task]] = relationship()

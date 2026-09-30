@@ -3,26 +3,30 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
   <title>{% block title %}{{ title|default("CRM") }}{% endblock %} — Федерация гольфа МО</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/css/app.css">
   <script src="/static/vendor/htmx.min.js" defer></script>
   <script src="/static/vendor/chart.umd.min.js"></script>
 </head>
-<body>
+<body data-user="{{ user.id }}">
 <div class="layout">
-  <aside class="sidebar">
+  <aside class="sidebar" aria-label="Главное меню">
     <a class="brand" href="/">
       <span class="brand-logo">{{ icon("flag") }}</span>
-      <span class="brand-text">Федерация гольфа<span>Московской области · CRM</span></span>
+      <span class="brand-text">Федерация гольфа<span>Московской области</span></span>
     </a>
     <nav class="nav">
       {% set section = active|default("") %}
-      {% for key, url, label, ic in nav %}
-      <a href="{{ url }}" class="{% if key == section %}active{% endif %}" title="{{ label }}">{{ icon(ic) }}<span>{{ label }}</span></a>
+      {% for group, items in nav_groups %}
+      <div class="nav-group">{{ group }}</div>
+      {% for key, url, label, ic in items %}
+      <a href="{{ url }}" class="{% if key == section %}active{% endif %}" title="{{ label }}" {% if key == section %}aria-current="page"{% endif %}>{{ icon(ic) }}<span>{{ label }}</span></a>
+      {% endfor %}
       {% endfor %}
     </nav>
-    <div class="sidebar-foot">Демонстрационная версия</div>
+    <div class="sidebar-foot">Демонстрационная версия CRM</div>
   </aside>
   <div class="main">
     <header class="topbar">
@@ -34,29 +38,48 @@
         <div id="search-results" class="search-results"></div>
       </form>
       <div class="topbar-right">
-        <span class="demo-badge" title="Роли переключаются без пароля">ДЕМО: настоящая авторизация не реализована</span>
-        <form class="role-switch" method="post" action="/role">
-          <label for="role-select" class="label-text">Роль:</label>
-          <select id="role-select" name="role" onchange="this.form.submit()">
-            {% for code, label in L.ROLES.items() %}
-            <option value="{{ code }}" {% if code == role %}selected{% endif %}>{{ label }}</option>
+        {% if user.is_director %}
+        <button class="btn btn-primary btn-new-task" type="button" hx-get="/tasks/new" hx-target="#modal-content" data-modal-open title="Новая задача">{{ icon("plus") }}<span class="label">Новая задача</span></button>
+        {% endif %}
+        <div class="notif-wrap">
+          <button class="icon-btn" id="bell-btn" type="button" aria-label="Уведомления" aria-haspopup="true" aria-expanded="false"
+                  hx-get="/notifications/menu" hx-target="#notif-menu" hx-swap="innerHTML">
+            {{ icon("bell") }}<span id="bell-count"></span>
+          </button>
+          <div id="notif-menu" class="notif-menu hidden" role="menu"></div>
+          <span id="notif-poller" class="hidden" hx-get="/notifications/poll" hx-trigger="load, every 20s, tasksChanged from:body"
+                hx-vals='js:{since: GolfCRM.lastSeen()}' hx-target="#bell-count" hx-swap="innerHTML"></span>
+        </div>
+        <span class="demo-badge" title="Пользователь выбирается без пароля">ДЕМО: настоящая авторизация не реализована</span>
+        <form class="user-switch" method="post" action="/user">
+          <label for="user-select" class="sr-only">Текущий пользователь</label>
+          <select id="user-select" name="user" onchange="this.form.submit()">
+            {% for u in users %}
+            <option value="{{ u.id }}" {% if u.id == user.id %}selected{% endif %}>{{ u.label }}</option>
             {% endfor %}
           </select>
           <noscript><button class="btn btn-sm" type="submit">Применить</button></noscript>
         </form>
       </div>
     </header>
-    <main class="content">
-      {% if flash %}
-      <div class="flash {{ flash.kind }}" role="status"><span>{{ flash.text }}</span><button type="button" data-dismiss aria-label="Закрыть">×</button></div>
-      {% endif %}
+    <main class="content" id="content">
       {% block content %}{% endblock %}
     </main>
     <footer class="footer">
       <span>Все данные вымышлены. Демонстрационный прототип CRM Федерации гольфа Московской области.</span>
-      <span>Сегодня: {{ today|date }}</span>
+      <span>Сегодня: {{ today|date }}, {{ now.strftime("%H:%M") }} (МСК)</span>
     </footer>
   </div>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite">
+  {% if flash %}<div class="toast {{ flash.kind }}" role="status" data-autoclose><div class="body">{{ flash.text }}</div><button type="button" data-dismiss aria-label="Закрыть">×</button></div>{% endif %}
+</div>
+<div class="overlay" id="modal" hidden>
+  <div class="modal" id="modal-content" role="dialog" aria-modal="true" aria-labelledby="modal-title"></div>
+</div>
+<div class="overlay side" id="panel" hidden>
+  <aside class="slideover" id="panel-content" role="dialog" aria-modal="true" aria-labelledby="panel-title"></aside>
 </div>
 <script src="/static/js/app.js"></script>
 {% block scripts %}{% endblock %}

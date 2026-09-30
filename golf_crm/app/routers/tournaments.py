@@ -29,6 +29,7 @@ from app.services.registration import (
 )
 from app.services.tournaments import TRANSITIONS, post_rounds_to_handicap, round_date
 from app.web import redirect, render, require
+from app import timeutil as msk
 
 router = APIRouter()
 
@@ -46,7 +47,7 @@ def get_tournament(s: Session, tid: int) -> Tournament:
 
 @router.get("/tournaments")
 def tournaments_list(request: Request, s: Session = Depends(get_session), _=Depends(require("tournaments"))):
-    today = date.today()
+    today = msk.today()
     view = request.query_params.get("view", "list")
     status = request.query_params.get("status", "")
     stmt = select(Tournament).order_by(Tournament.start_date)
@@ -88,7 +89,7 @@ def courses_for_form(s: Session):
 
 def form_values(t: Tournament | None) -> dict:
     if t is None:
-        start = date.today() + timedelta(days=30)
+        start = msk.today() + timedelta(days=30)
         return {"start_date": f.fmt_date(start), "end_date": f.fmt_date(start),
                 "registration_deadline": f.fmt_date(start - timedelta(days=5)), "format": "stroke_net",
                 "categories": ["men", "women"], "rounds_count": "1", "entry_fee": "3000",
@@ -298,8 +299,8 @@ def create_invoice(s: Session, reg: Registration) -> None:
     exists = s.scalar(select(Payment.id).where(Payment.registration_id == reg.id))
     if exists:
         return
-    s.add(Payment(member=reg.member, type="tournament", amount=t.entry_fee, issued_on=date.today(),
-                  due_date=max(t.registration_deadline, date.today()), method="card", status="pending",
+    s.add(Payment(member=reg.member, type="tournament", amount=t.entry_fee, issued_on=msk.today(),
+                  due_date=max(t.registration_deadline, msk.today()), method="card", status="pending",
                   registration=reg, comment=f"Взнос: {t.name}"))
 
 
@@ -325,7 +326,7 @@ async def tournament_register(tid: int, request: Request, s: Session = Depends(g
     if tee and tee not in TEE_COLORS:
         return redirect(back, "Выберите ти.", "error")
     try:
-        reg = register(t, member, date.today(), tee)
+        reg = register(t, member, msk.today(), tee)
     except RegistrationError as exc:
         return redirect(back, str(exc), "error")
     s.flush()
@@ -391,12 +392,12 @@ def registration_fee(rid: int, request: Request, s: Session = Depends(get_sessio
     t = reg.tournament
     payment = s.scalar(select(Payment).where(Payment.registration_id == reg.id, Payment.status != "paid"))
     if payment is None:
-        payment = Payment(member=reg.member, type="tournament", amount=t.entry_fee, issued_on=date.today(),
-                          due_date=date.today(), method="card", status="pending", registration=reg,
+        payment = Payment(member=reg.member, type="tournament", amount=t.entry_fee, issued_on=msk.today(),
+                          due_date=msk.today(), method="card", status="pending", registration=reg,
                           comment=f"Взнос: {t.name}")
         s.add(payment)
         s.flush()
-    pay.mark_paid(payment, date.today())
+    pay.mark_paid(payment, msk.today())
     reg.fee_paid = True
     audit.log(s, role, "payment", "payment", payment.id,
               f"Турнирный взнос {reg.member.full_name} («{t.name}») отмечен как оплаченный")

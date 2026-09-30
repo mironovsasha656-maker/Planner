@@ -16,7 +16,8 @@ from app.models import Club, Course, CourseTee, Member, Payment, Round
 from app.services import audit, handicap
 from app.services import formatting as f
 from app.services.payments import membership_fee
-from app.web import get_role, redirect, render, require
+from app.web import redirect, render, require
+from app import timeutil as msk
 
 router = APIRouter(prefix="/players")
 
@@ -92,7 +93,7 @@ def filtered_query(params: dict, today: date):
 
 @router.get("")
 def players_list(request: Request, s: Session = Depends(get_session), _=Depends(require("players"))):
-    today = date.today()
+    today = msk.today()
     params = read_filters(request)
     stmt = filtered_query(params, today)
     total = s.scalar(select(func.count()).select_from(stmt.order_by(None).subquery()))
@@ -111,7 +112,7 @@ def players_list(request: Request, s: Session = Depends(get_session), _=Depends(
 @router.get("/export.csv")
 def players_export(request: Request, s: Session = Depends(get_session), role=Depends(require("players"))):
     params = read_filters(request)
-    members = list(s.scalars(filtered_query(params, date.today())))
+    members = list(s.scalars(filtered_query(params, msk.today())))
     rows = [
         (
             m.license_number, m.full_name, f.fmt_date(m.birth_date), GENDER[m.gender],
@@ -128,7 +129,7 @@ def players_export(request: Request, s: Session = Depends(get_session), role=Dep
     )
     audit.log(s, role, "export", "member", None, f"Экспорт списка игроков в CSV ({len(rows)} записей)")
     s.commit()
-    filename = f"players_{date.today():%Y%m%d}.csv"
+    filename = f"players_{msk.today():%Y%m%d}.csv"
     return Response(data, media_type="text/csv; charset=utf-8",
                     headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
@@ -192,7 +193,7 @@ def validate(form, s: Session, today: date) -> tuple[dict, dict]:
 
 def form_values(m: Member | None) -> dict:
     if m is None:
-        return {"gender": "M", "status": "active", "join_date": f.fmt_date(date.today()), "pd_consent": True}
+        return {"gender": "M", "status": "active", "join_date": f.fmt_date(msk.today()), "pd_consent": True}
     return {
         "last_name": m.last_name, "first_name": m.first_name, "middle_name": m.middle_name,
         "birth_date": f.fmt_date(m.birth_date), "gender": m.gender, "phone": m.phone, "email": m.email,
@@ -225,7 +226,7 @@ def player_new(request: Request, s: Session = Depends(get_session), _=Depends(re
 @router.post("/new")
 async def player_create(request: Request, s: Session = Depends(get_session), role=Depends(require("players", True))):
     form = await request.form()
-    today = date.today()
+    today = msk.today()
     data, errors = validate(form, s, today)
     if data["email"] and s.scalar(select(Member.id).where(func.py_lower(Member.email) == data["email"].lower())):
         errors["email"] = "Игрок с таким e-mail уже есть в реестре."
@@ -263,7 +264,7 @@ async def player_update(member_id: int, request: Request, s: Session = Depends(g
                         role=Depends(require("players", True))):
     m = get_member(s, member_id)
     form = await request.form()
-    data, errors = validate(form, s, date.today())
+    data, errors = validate(form, s, msk.today())
     if data["email"] and s.scalar(select(Member.id).where(
             func.py_lower(Member.email) == data["email"].lower(), Member.id != m.id)):
         errors["email"] = "Игрок с таким e-mail уже есть в реестре."
@@ -358,7 +359,7 @@ async def player_add_round(member_id: int, request: Request, s: Session = Depend
     error = None
     if played is None:
         error = "Укажите дату раунда."
-    elif played > date.today():
+    elif played > msk.today():
         error = "Дата раунда не может быть в будущем."
     elif tee is None:
         error = "Выберите поле и ти."

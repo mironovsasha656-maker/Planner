@@ -8,7 +8,7 @@
 <div class="grid grid-3">
   {% for club, n in rows %}
   <a class="card" href="/clubs/{{ club.id }}" style="color:inherit; text-decoration:none">
-    <h2 style="color: var(--green-800)">{{ club.name }}</h2>
+    <h2>{{ club.name }}</h2>
     <div class="muted small mb">{{ club.district }}</div>
     <dl class="props" style="grid-template-columns: 120px 1fr">
       <dt>Игроков</dt><dd><strong>{{ n }}</strong></dd>

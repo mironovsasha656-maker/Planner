@@ -12,6 +12,7 @@ import random
 from datetime import date, datetime, time, timedelta
 
 from faker import Faker
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import config
@@ -22,6 +23,7 @@ from app.models import (
     Course,
     CourseTee,
     Member,
+    Notification,
     Message,
     Official,
     Payment,
@@ -29,10 +31,14 @@ from app.models import (
     Result,
     Round,
     Tournament,
+    User,
     age_category,
 )
 from app.services import handicap, leaderboard, payments, segmentation
+from app.services import tasks as task_service
+from app.services.users import DIRECTOR_ID, ROLE_DEFAULT_USER, ensure_users
 from app.services.registration import default_tee
+from app import timeutil as msk
 
 CLUBS = [
     # name, district, city, address, website slug, weight, courses [(name, holes, par)]
@@ -516,7 +522,7 @@ class Seeder:
             res = segmentation.resolve(self.s, seg, param, d)
             when = datetime.combine(d + timedelta(days=off), time(r.randint(9, 17), r.randint(0, 59)))
             msg = Message(subject=subject, body=body, segment=seg, segment_param=param, segment_label=res.label,
-                          sent_at=when, status="sent", recipients_count=len(res.recipients), sent_by="Администратор")
+                          sent_at=when, status="sent", recipients_count=len(res.recipients), sent_by=self.s.get(User, DIRECTOR_ID).label)
             self.s.add(msg)
             self.s.flush()
             self.audit(when, "admin", "mailing", "message", msg.id,
@@ -553,10 +559,89 @@ class Seeder:
                    "Загружены демонстрационные данные (все данные вымышлены)")
 
     def audit(self, when, role, action, etype, eid, text) -> None:
-        from app.labels import ROLES
-
-        self.s.add(AuditLog(created_at=when, user=ROLES[role], action=action, entity_type=etype, entity_id=eid,
+        user = self.s.get(User, ROLE_DEFAULT_USER[role])
+        self.s.add(AuditLog(created_at=when, user=user.label, action=action, entity_type=etype, entity_id=eid,
                             description=text))
+
+    # ------------------------------------------------------------------ tasks
+    def tasks(self) -> None:
+        """Director's tasks for the managers in every state; history is replayed through the task service."""
+        d = self.today
+        day0 = datetime.combine(d, time(0, 0))
+
+        def at(days: int, hh: int, mm: int = 0) -> datetime:
+            return day0 + timedelta(days=days, hours=hh, minutes=mm)
+
+        director = self.s.get(User, DIRECTOR_ID)
+        by_name = {t.name: t for t in self.tournament_list}
+        clubs = {c.name: c for c in self.club_list}
+        star = min(self.member_list, key=lambda m: m.handicap_index or 54)
+        ivan, maria, alexey = (self.s.get(User, uid) for uid in (2, 3, 4))
+        spec = [
+            # assignee, title, description, priority, created, due, related, history
+            (ivan, "Подготовить стартовый протокол Кубка «Серебряных Ключей»",
+             "Сформировать группы по гандикапу, согласовать время стартов с клубом (интервал 10 минут), "
+             "разослать протокол участникам за 3 дня до турнира.", "high", at(-3, 10, 5), at(4, 18),
+             ("tournament", by_name["Кубок «Серебряных Ключей»"].id), [("start", at(-1, 10, 15))]),
+            (ivan, "Согласовать судейскую бригаду на турнир «Золотая осень»",
+             "Нужны главный судья и два судьи на поле. Проверить, что у всех действует аттестация.", "normal",
+             at(-1, 16, 20), at(9, 12), ("tournament", by_name["Турнир «Золотая осень»"].id), []),
+            (ivan, "Разослать итоговый протокол Кубка «Княжьих Лугов» клубам",
+             "PDF протокола — всем клубам-участникам и на сайт Федерации.", "normal", at(-19, 11), at(-12, 18),
+             ("tournament", by_name["Кубок «Княжьих Лугов»"].id),
+             [("start", at(-18, 9, 40)), ("complete", at(-14, 16, 40), "Разослано 7 клубам, опубликовано на сайте.")]),
+            (ivan, "Проверить заявки юниоров на «Закрытие сезона»",
+             "Сверить возраст и гандикап юниоров, подавших заявки, уточнить зачёт.", "normal", at(-6, 12, 30),
+             at(-1, 18), ("tournament", by_name["Закрытие сезона"].id), [("start", at(-4, 11))]),
+            (ivan, "Проверить корректность раундов лучшего игрока области",
+             "Перед публикацией рейтинга сверить карточки последних раундов и пересчитать индекс.", "normal",
+             at(-2, 9, 30), at(1, 18), ("member", star.id),
+             [("start", at(-2, 14)), ("complete", at(-1, 17, 30), "Раунды сверены, индекс пересчитан — ошибок нет.")]),
+            (maria, "Напомнить должникам об оплате членского взноса",
+             "Сделать рассылку должникам и обзвонить тех, у кого просрочка больше 60 дней.", "high", at(0, 9, 10),
+             at(2, 17), None, []),
+            (maria, "Сверить турнирные взносы Осеннего Кубка Федерации",
+             "Все подтверждённые участники должны быть с оплаченным взносом; расхождения — в комментарий.", "normal",
+             at(-2, 15), at(1, 15), ("tournament", by_name["Осенний Кубок Федерации"].id), [("start", at(-1, 11, 45))]),
+            (maria, "Подготовить отчёт о поступлениях за месяц",
+             "Сводка по членским и турнирным взносам, сравнение с прошлым месяцем.", "normal", at(-8, 10),
+             at(-3, 12), None, [("start", at(-6, 10)), ("complete", at(-4, 18, 5), "Отчёт в папке «Финансы», итог выше плана.")]),
+            (maria, "Выставить счета за аренду шкафчиков",
+             "Счета всем арендаторам на следующий сезон.", "low", at(-10, 14), at(-6, 18), None,
+             [("start", at(-7, 9)), ("complete", at(-5, 11, 20), "")]),
+            (alexey, "Обновить контакты клуба «Тихая Заводь»",
+             "Сменился управляющий клуба — обновить контактное лицо и телефон.", "low", at(-1, 10), at(14, 18),
+             ("club", clubs["Гольф-клуб «Тихая Заводь»"].id), []),
+            (alexey, "Согласовать с клубом «Озёрный Край» даты весеннего турнира",
+             "Предложить 2–3 варианта дат в мае, учесть календарь соседних клубов.", "normal", at(-9, 12),
+             at(-2, 12), ("club", clubs["Гольф-клуб «Озёрный Край»"].id), []),
+            (alexey, "Собрать согласия на обработку ПДн у новых игроков",
+             "У части игроков нет согласия — без него они не попадают в рассылки.", "high", at(-4, 9), at(5, 18),
+             None, [("start", at(-3, 10, 30))]),
+            (alexey, "Подготовить поздравление победителям Чемпионата области",
+             "Текст для сайта и соцсетей, фото награждения.", "low", at(-60, 10), at(-55, 18),
+             ("tournament", by_name["Чемпионат Московской области"].id),
+             [("start", at(-59, 11)), ("complete", at(-58, 15, 10), "Опубликовано.")]),
+            (alexey, "Организовать фотосъёмку на Кубке «Тихой Заводи»",
+             "Договориться с фотографом, согласовать площадку для награждения.", "normal", at(-40, 12), at(-31, 9),
+             ("tournament", by_name["Кубок «Тихой Заводи»"].id), [("cancel", at(-36, 17))]),
+        ]
+        for assignee, title, desc, prio, created, due, related, history in spec:
+            data = dict(title=title, description=desc, assignee=assignee, priority=prio, due_at=due,
+                        related_type=related[0] if related else None, related_id=related[1] if related else None)
+            task = task_service.create(self.s, director, data, created)
+            for step in history:
+                if step[0] == "start":
+                    task_service.start(self.s, task, assignee, step[1])
+                elif step[0] == "complete":
+                    task_service.complete(self.s, task, assignee, step[2], step[1])
+                else:
+                    task_service.cancel(self.s, task, director, step[1])
+        self.s.flush()
+        task_service.sync_overdue(self.s, max(msk.now(), day0 + timedelta(hours=7)))
+        # Older notifications have been read; the last three days stay unread.
+        for n in self.s.scalars(select(Notification)):
+            n.is_read = n.created_at < day0 - timedelta(days=3)
 
     # ------------------------------------------------------------------ run
     def run(self) -> None:
@@ -570,12 +655,14 @@ class Seeder:
         self.payments()
         self.officials()
         self.s.flush()
+        ensure_users(self.s)
         self.mailings_and_audit()
+        self.tasks()
         self.s.commit()
 
 
 def seed(session: Session, today: date | None = None) -> None:
-    Seeder(session, today or date.today()).run()
+    Seeder(session, today or msk.today()).run()
 
 
 def reset_database(bind=None) -> None:

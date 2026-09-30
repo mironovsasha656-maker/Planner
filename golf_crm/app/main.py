@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from datetime import date
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -19,14 +18,18 @@ from app.routers import (
     finance,
     handicap,
     mailings,
+    notifications,
     officials,
     players,
     roles,
     search,
+    tasks,
     tournaments,
 )
 from app.services import payments
+from app.services.users import ensure_users
 from app.web import render
+from app import timeutil as msk
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
@@ -35,8 +38,9 @@ STATIC_DIR = Path(__file__).resolve().parent / "static"
 async def lifespan(_app: FastAPI):
     create_all()
     with SessionLocal() as session:
-        if payments.refresh_overdue(session, date.today()):
-            session.commit()
+        ensure_users(session)
+        payments.refresh_overdue(session, msk.today())
+        session.commit()
     yield
 
 
@@ -62,8 +66,8 @@ def create_app() -> FastAPI:
         return render(request, "error.html", status_code=exc.status_code, title=title, text=text,
                       code=exc.status_code)
 
-    for module in (dashboard, players, clubs, tournaments, handicap, finance, officials, mailings, audit,
-                   search, roles):
+    for module in (dashboard, tasks, players, clubs, tournaments, handicap, finance, officials, mailings,
+                   notifications, audit, search, roles):
         app.include_router(module.router)
 
     return app

@@ -11,6 +11,7 @@ import seed
 from app.db import Base, get_session, make_engine
 from app.main import app
 from app.models import AuditLog, Member, Message, Payment, Registration, Tournament
+from app import timeutil as msk
 
 
 @pytest.fixture(scope="module")
@@ -20,7 +21,7 @@ def db(tmp_path_factory):
     Base.metadata.create_all(engine)
     factory = sessionmaker(bind=engine, expire_on_commit=False)
     with factory() as s:
-        seed.seed(s, date.today())
+        seed.seed(s, msk.today())
 
     def override():
         s = factory()
@@ -118,7 +119,7 @@ def test_create_player_issues_membership_invoice(db):
     c = client("secretary")
     r = c.post("/players/new", data={"last_name": "Тестов", "first_name": "Пётр", "middle_name": "Ильич",
                                      "birth_date": "1990-04-12", "gender": "M", "status": "active",
-                                     "join_date": date.today().isoformat(), "handicap_index": "24,3",
+                                     "join_date": msk.today().isoformat(), "handicap_index": "24,3",
                                      "email": "petr.testov@example.com", "pd_consent": "on"})
     assert r.status_code == 303
     mid = int(r.headers["location"].rsplit("/", 1)[1])
@@ -199,7 +200,7 @@ def test_mark_paid_restores_member_status(db):
     assert r.status_code == 303
     with db() as s:
         assert s.get(Payment, pid).status == "paid"
-        assert s.get(Payment, pid).paid_on == date.today()
+        assert s.get(Payment, pid).paid_on == msk.today()
         assert s.get(Member, mid).status == "active"
 
 
@@ -209,10 +210,10 @@ def test_add_round_and_recalculate(db):
         m = s.get(Member, 5)
         tee_id = m.rounds[0].tee.id
         count = len(m.rounds)
-    r = c.post("/players/5/rounds", data={"played_on": date.today().isoformat(), "tee_id": str(tee_id), "score": "15"})
+    r = c.post("/players/5/rounds", data={"played_on": msk.today().isoformat(), "tee_id": str(tee_id), "score": "15"})
     with db() as s:
         assert len(s.get(Member, 5).rounds) == count
-    c.post("/players/5/rounds", data={"played_on": date.today().isoformat(), "tee_id": str(tee_id), "score": "72"})
+    c.post("/players/5/rounds", data={"played_on": msk.today().isoformat(), "tee_id": str(tee_id), "score": "72"})
     r = c.post("/players/5/recalc")
     assert r.status_code == 303
     with db() as s:
