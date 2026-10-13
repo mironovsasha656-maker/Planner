@@ -18,7 +18,7 @@
       </select>
       <button class="btn" type="submit" data-confirm="Изменить статус членства игрока {{ m.full_name }}?">Сменить статус</button>
     </form>
-    <a class="btn btn-primary" href="/players/{{ m.id }}/edit">Редактировать</a>
+    <a class="btn btn-primary" href="/players/{{ m.id }}/edit" data-modal="Редактирование игрока">Редактировать</a>
     {% endif %}
   </div>
 </div>
@@ -62,7 +62,7 @@
 </div>
 <div class="card mt">
   <h2>Заметки</h2>
-  {% if m.notes %}<p style="white-space: pre-wrap">{{ m.notes }}</p>{% else %}<p class="muted">Заметок нет.{% if can("players", True) %} Добавить можно в <a href="/players/{{ m.id }}/edit">редактировании</a>.{% endif %}</p>{% endif %}
+  {% if m.notes %}<p style="white-space: pre-wrap">{{ m.notes }}</p>{% else %}<p class="muted">Заметок нет.{% if can("players", True) %} Добавить можно в <a href="/players/{{ m.id }}/edit" data-modal="Редактирование игрока">редактировании</a>.{% endif %}</p>{% endif %}
 </div>
 
 {% elif tab == "handicap" %}

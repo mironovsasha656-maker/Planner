@@ -7,7 +7,7 @@
   </div>
   <div class="actions">
     <a class="btn" id="export-link" href="/players/export.csv?{{ query_string(params) }}">Экспорт в CSV</a>
-    {% if can("players", True) %}<a class="btn btn-primary" href="/players/new">+ Новый игрок</a>{% endif %}
+    {% if can("players", True) %}<a class="btn btn-primary" href="/players/new" data-modal="Новый игрок">+ Новый игрок</a>{% endif %}
   </div>
 </div>
 

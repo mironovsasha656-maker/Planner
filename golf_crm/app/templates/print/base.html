@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{% endblock %} — {{ t.name }}</title>
-  <link rel="stylesheet" href="/static/css/app.css">
+  <link rel="stylesheet" href="{{ static_url('css/app.css') }}">
 </head>
 <body class="paper">
 <div class="print-page">
@@ -20,6 +20,6 @@
   </div>
   <p class="small muted center mt">Документ сформирован {{ today|date }} в демо-версии CRM. Все данные вымышлены.</p>
 </div>
-<script src="/static/js/app.js"></script>
+<script src="{{ static_url('js/app.js') }}"></script>
 </body>
 </html>

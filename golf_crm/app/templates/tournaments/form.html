@@ -3,8 +3,9 @@
 {% block content %}
 <div class="breadcrumbs"><a href="/tournaments">Турниры</a>{% if t %} / <a href="/tournaments/{{ t.id }}">{{ t.name }}</a>{% endif %}</div>
 <div class="page-head"><h1>{{ "Редактирование турнира" if t else "Новый турнир" }}</h1></div>
-{% if errors %}<div class="alert danger">Проверьте поля, отмеченные красным.</div>{% endif %}
-<form class="card" method="post" novalidate>
+<form class="card modal-form" method="post" action="{{ request.url.path }}" novalidate
+      hx-post="{{ request.url.path }}" hx-target="this" hx-select=".modal-form" hx-swap="outerHTML">
+  {% if errors %}<div class="alert danger">Проверьте поля, отмеченные красным.</div>{% endif %}
   <div class="form-grid">
     {% call field("name", "Название", errors, True, cls="full") %}<input type="text" id="f-name" name="name" value="{{ v.name }}" maxlength="150" required>{% endcall %}
     {% call field("start_date", "Дата начала", errors, True) %}<input type="text" class="date-input" inputmode="numeric" placeholder="ДД.ММ.ГГГГ" maxlength="10" autocomplete="off" id="f-start_date" name="start_date" value="{{ v.start_date }}" required>{% endcall %}

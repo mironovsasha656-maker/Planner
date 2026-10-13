@@ -382,9 +382,9 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); width: 15
 .notif-wrap { position: relative; }
 
 /* ---------- modal & slide-over ---------- */
-.overlay { position: fixed; inset: 0; z-index: 80; background: rgba(5, 6, 7, .66); display: flex; align-items: center; justify-content: center; padding: 20px; animation: fade-in .15s ease-out; }
+.overlay { position: fixed; inset: 0; z-index: 80; background: rgba(5, 6, 7, .66); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; padding: 20px; animation: fade-in .22s ease-out; }
 .overlay[hidden] { display: none; }
-.modal { width: min(640px, 100%); max-height: calc(100vh - 40px); overflow-y: auto; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); box-shadow: 0 24px 60px rgba(0, 0, 0, .55); animation: modal-in .18s ease-out; }
+.modal { width: min(640px, 100%); max-height: calc(100vh - 40px); overflow-y: auto; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); box-shadow: 0 24px 60px rgba(0, 0, 0, .55); animation: modal-in .26s cubic-bezier(.2, .8, .2, 1); }
 .modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); z-index: 1; }
 .modal-head h2 { margin: 0; font-size: 16px; }
 .modal-body { padding: 20px; }
@@ -395,7 +395,7 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); width: 15
 .slideover { width: min(520px, 100%); height: 100%; overflow-y: auto; background: var(--surface); border-left: 1px solid var(--border-strong); animation: slide-in .2s ease-out; }
 .slideover .modal-head { position: sticky; }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes modal-in { from { opacity: 0; transform: translateY(8px) scale(.99); } to { opacity: 1; transform: none; } }
+@keyframes modal-in { from { opacity: 0; transform: translateY(12px) scale(.97); } to { opacity: 1; transform: none; } }
 @keyframes slide-in { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 body.no-scroll { overflow: hidden; }
 
@@ -478,3 +478,7 @@ a.card { color: inherit; }
 a.card:hover { text-decoration: none; border-color: var(--border-strong); background: var(--surface-2); color: inherit; }
 .task-card .meta svg { width: 13px; height: 13px; vertical-align: -2px; margin-right: 2px; }
 .notif-menu .items { max-height: min(60vh, 520px); overflow-y: auto; }
+.modal-host .modal-form { border: 0; padding: 0; background: transparent; }
+.modal-host .modal-form .form-grid { gap: 14px 16px; }
+@media (prefers-reduced-motion: reduce) { .overlay, .modal, .slideover, .toast { animation: none !important; } }
+.modal-host .form-actions { position: sticky; bottom: -20px; margin: 16px -20px -20px; padding: 14px 20px; background: var(--surface); border-top: 1px solid var(--border); justify-content: flex-end; }

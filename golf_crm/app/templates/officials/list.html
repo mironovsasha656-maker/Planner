@@ -3,7 +3,7 @@
 {% block content %}
 <div class="page-head">
   <div><h1>Судьи и тренеры</h1><div class="sub">Аттестованные специалисты Федерации</div></div>
-  {% if can("officials", True) %}<a class="btn btn-primary" href="/officials/new">+ Добавить</a>{% endif %}
+  {% if can("officials", True) %}<a class="btn btn-primary" href="/officials/new" data-modal="Новый специалист">+ Добавить</a>{% endif %}
 </div>
 
 {% if expired or expiring %}
@@ -36,7 +36,7 @@
           {% elif d < warn_days %}<div><span class="badge amber">Истекает через {{ d }} {{ plural(d, "день", "дня", "дней") }}</span></div>{% endif %}
         </td>
         <td class="small">{{ o.phone }}<br>{{ o.email }}</td>
-        {% if can("officials", True) %}<td class="actions-cell"><a class="btn btn-sm" href="/officials/{{ o.id }}/edit">Изменить</a></td>{% endif %}
+        {% if can("officials", True) %}<td class="actions-cell"><a class="btn btn-sm" href="/officials/{{ o.id }}/edit" data-modal="Редактирование специалиста">Изменить</a></td>{% endif %}
       </tr>
     {% endfor %}
     </tbody>

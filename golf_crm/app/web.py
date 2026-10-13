@@ -28,6 +28,20 @@ env.filters.update(
 )
 env.globals.update(L=labels, plural=f.plural)
 
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+
+
+def static_url(path: str) -> str:
+    """URL of a static file with a version stamp, so browsers never keep a stale CSS/JS after an update."""
+    try:
+        version = int((STATIC_DIR / path).stat().st_mtime)
+    except OSError:
+        version = 0
+    return f"/static/{path}?v={version}"
+
+
+env.globals.update(static_url=static_url)
+
 # Demo roles: which sections each role may open ("r") or change ("rw").
 ACCESS: dict[str, dict[str, str]] = {
     "admin": {

@@ -173,6 +173,48 @@
     }
   }, true);
 
+  // Links with data-modal="Заголовок" open their form page in the centered modal instead of navigating.
+  // The page's <form class="modal-form"> is taken from the response; it submits via htmx and is
+  // re-rendered in place on validation errors, success redirects the whole page (HX-Redirect).
+  document.addEventListener("click", function (e) {
+    var link = e.target.closest("a[data-modal]");
+    if (!link || e.ctrlKey || e.metaKey || e.shiftKey || !window.htmx) return;
+    e.preventDefault();
+    fetch(link.href, { headers: { "HX-Request": "true" }, credentials: "same-origin" })
+      .then(function (r) { return r.text(); })
+      .then(function (html) {
+        var doc = new DOMParser().parseFromString(html, "text/html");
+        var form = doc.querySelector(".modal-form");
+        if (!form) { window.location.href = link.href; return; }
+        var box = document.getElementById("modal-content");
+        box.innerHTML = '<div class="modal-head"><h2 id="modal-title"></h2>' +
+          '<button type="button" class="close-btn" data-close aria-label="Закрыть">×</button></div>' +
+          '<div class="modal-body modal-host"></div>';
+        box.querySelector("#modal-title").textContent = link.dataset.modal;
+        box.querySelector(".modal-host").appendChild(document.importNode(form, true));
+        window.htmx.process(box);
+        openDialog("modal");
+      })
+      .catch(function () { window.location.href = link.href; });
+  });
+  // Inside the modal, "Отмена" links close it instead of leaving the page.
+  document.addEventListener("click", function (e) {
+    var cancel = e.target.closest(".modal-host .form-actions a");
+    if (cancel) { e.preventDefault(); closeDialog("modal"); }
+  }, true);
+  // Swap 400 responses (validation errors) like successful ones, so errors appear inside the form.
+  document.addEventListener("htmx:beforeSwap", function (e) {
+    if (e.detail.xhr.status === 400) { e.detail.shouldSwap = true; e.detail.isError = false; }
+  });
+  document.addEventListener("htmx:afterSwap", function (e) {
+    var host = e.detail.target && e.detail.target.closest && e.detail.target.closest(".modal-host");
+    if (!host) host = e.detail.elt && e.detail.elt.closest && e.detail.elt.closest(".modal-host");
+    if (host) {
+      var err = host.querySelector(".has-error input, .has-error select, .has-error textarea");
+      if (err) err.focus();
+    }
+  });
+
   // Confirmation for dangerous actions: <form data-confirm> or <button data-confirm>.
   document.addEventListener("submit", function (e) {
     var submitter = e.submitter;

@@ -5,7 +5,7 @@
   <div><h1>Финансы</h1><div class="sub">Членские и турнирные взносы. Оплата имитируется: статусы меняются вручную.</div></div>
   <div class="actions">
     {% if tab == "payments" %}<a class="btn" id="export-link" href="/finance/export.csv?{{ query_string(params) }}">Экспорт в CSV</a>{% endif %}
-    {% if can("finance", True) %}<a class="btn btn-primary" href="/finance/payments/new">+ Новый платёж</a>{% endif %}
+    {% if can("finance", True) %}<a class="btn btn-primary" href="/finance/payments/new" data-modal="Новый платёж">+ Новый платёж</a>{% endif %}
   </div>
 </div>
 

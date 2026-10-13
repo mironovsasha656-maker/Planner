@@ -3,8 +3,9 @@
 {% block content %}
 <div class="breadcrumbs"><a href="/officials">Судьи и тренеры</a> / {{ o.full_name if o else "Новый специалист" }}</div>
 <div class="page-head"><h1>{{ "Редактирование" if o else "Новый специалист" }}</h1></div>
-{% if errors %}<div class="alert danger">Проверьте поля, отмеченные красным.</div>{% endif %}
-<form class="card" method="post" novalidate>
+<form class="card modal-form" method="post" action="{{ request.url.path }}" novalidate
+      hx-post="{{ request.url.path }}" hx-target="this" hx-select=".modal-form" hx-swap="outerHTML">
+  {% if errors %}<div class="alert danger">Проверьте поля, отмеченные красным.</div>{% endif %}
   <div class="form-grid">
     {% call field("full_name", "ФИО", errors, True, cls="full") %}<input type="text" id="f-full_name" name="full_name" value="{{ v.full_name }}" maxlength="150">{% endcall %}
     {% call field("role", "Роль", errors, True) %}

@@ -293,3 +293,21 @@ def test_user_input_is_escaped(db):
     page = c.get(r.headers["location"]).text
     assert "<script>alert(1)</script>" not in page
     assert "&lt;script&gt;alert(1)&lt;/script&gt;" in page
+
+
+def test_static_assets_are_versioned_and_revalidated(db):
+    c = client()
+    page = c.get("/").text
+    assert re.search(r'/static/css/app\.css\?v=\d+', page) and re.search(r'/static/js/app\.js\?v=\d+', page)
+    r = c.get("/static/css/app.css")
+    assert r.status_code == 200 and r.headers["cache-control"] == "no-cache"
+
+
+def test_modal_form_success_redirects_via_htmx(db):
+    c = client()
+    r = c.post("/officials/new", headers={"HX-Request": "true"}, data={
+        "full_name": "Тестов Тест Тестович", "role": "referee", "qualification": "Судья II категории",
+        "cert_expiry": "01.01.2030"})
+    assert r.status_code == 200 and r.headers["hx-redirect"] == "/officials"
+    bad = c.post("/officials/new", headers={"HX-Request": "true"}, data={"full_name": ""})
+    assert bad.status_code == 400 and 'class="card modal-form"' in bad.text and "Укажите ФИО." in bad.text

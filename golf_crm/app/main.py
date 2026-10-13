@@ -53,7 +53,17 @@ def create_app() -> FastAPI:
         length = request.headers.get("content-length")
         if length and length.isdigit() and int(length) > config.MAX_FORM_BYTES:
             return PlainTextResponse("Слишком большой объём данных формы.", status_code=413)
-        return await call_next(request)
+        response = await call_next(request)
+        if request.headers.get("HX-Request") == "true" and response.status_code in (302, 303):
+            # A form submitted from a modal succeeded: let htmx navigate to the target page.
+            response.status_code = 200
+            location = response.headers["location"]
+            del response.headers["location"]
+            response.headers["HX-Redirect"] = location
+        if request.url.path.startswith("/static/"):
+            # Always revalidate: Safari otherwise keeps the previous version's CSS/JS for days.
+            response.headers["Cache-Control"] = "no-cache"
+        return response
 
     @app.exception_handler(StarletteHTTPException)
     async def http_error(request: Request, exc: StarletteHTTPException):

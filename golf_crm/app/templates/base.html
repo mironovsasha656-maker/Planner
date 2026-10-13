@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>{% block title %}{{ title|default("CRM") }}{% endblock %} — Федерация гольфа МО</title>
-  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/css/app.css">
-  <script src="/static/vendor/htmx.min.js" defer></script>
-  <script src="/static/vendor/chart.umd.min.js"></script>
+  <link rel="icon" href="{{ static_url('favicon.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ static_url('css/app.css') }}">
+  <script src="{{ static_url('vendor/htmx.min.js') }}" defer></script>
+  <script src="{{ static_url('vendor/chart.umd.min.js') }}"></script>
 </head>
 <body data-user="{{ user.id }}">
 <div class="layout">
@@ -81,7 +81,7 @@
 <div class="overlay side" id="panel" hidden>
   <aside class="slideover" id="panel-content" role="dialog" aria-modal="true" aria-labelledby="panel-title"></aside>
 </div>
-<script src="/static/js/app.js"></script>
+<script src="{{ static_url('js/app.js') }}"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

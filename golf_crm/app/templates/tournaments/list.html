@@ -29,7 +29,7 @@
       <a href="/tournaments" class="{% if view != 'calendar' %}active{% endif %}">Список</a>
       <a href="/tournaments?view=calendar" class="{% if view == 'calendar' %}active{% endif %}">Календарь</a>
     </div>
-    {% if can("tournaments", True) %}<a class="btn btn-primary" href="/tournaments/new">+ Новый турнир</a>{% endif %}
+    {% if can("tournaments", True) %}<a class="btn btn-primary" href="/tournaments/new" data-modal="Новый турнир">+ Новый турнир</a>{% endif %}
   </div>
 </div>
 

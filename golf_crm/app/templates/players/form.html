@@ -4,9 +4,10 @@
 <div class="breadcrumbs"><a href="/players">Игроки</a>{% if member %} / <a href="/players/{{ member.id }}">{{ member.full_name }}</a>{% endif %}</div>
 <div class="page-head"><h1>{{ "Редактирование игрока" if member else "Новый игрок" }}</h1></div>
 
-{% if errors %}<div class="alert danger">Проверьте поля, отмеченные красным.</div>{% endif %}
 
-<form class="card" method="post" novalidate>
+<form class="card modal-form" method="post" action="{{ request.url.path }}" novalidate
+      hx-post="{{ request.url.path }}" hx-target="this" hx-select=".modal-form" hx-swap="outerHTML">
+  {% if errors %}<div class="alert danger">Проверьте поля, отмеченные красным.</div>{% endif %}
   <div class="form-grid">
     {% call field("last_name", "Фамилия", errors, True) %}<input type="text" id="f-last_name" name="last_name" value="{{ v.last_name }}" maxlength="60" required>{% endcall %}
     {% call field("first_name", "Имя", errors, True) %}<input type="text" id="f-first_name" name="first_name" value="{{ v.first_name }}" maxlength="60" required>{% endcall %}

@@ -11,7 +11,7 @@
   <div class="actions">
     <a class="btn" href="/tournaments/{{ t.id }}/print/start" target="_blank" rel="noopener">Стартовый протокол</a>
     {% if t.status in ("in_progress", "finished") %}<a class="btn" href="/tournaments/{{ t.id }}/print/final" target="_blank" rel="noopener">{{ "Итоговый протокол" if t.status == "finished" else "Промежуточный протокол" }}</a>{% endif %}
-    {% if editable and t.status not in ("finished", "cancelled") %}<a class="btn" href="/tournaments/{{ t.id }}/edit">Редактировать</a>{% endif %}
+    {% if editable and t.status not in ("finished", "cancelled") %}<a class="btn" href="/tournaments/{{ t.id }}/edit" data-modal="Редактирование турнира">Редактировать</a>{% endif %}
     {% if editable %}
       {% for st in transitions %}
       <form class="inline" method="post" action="/tournaments/{{ t.id }}/status">
