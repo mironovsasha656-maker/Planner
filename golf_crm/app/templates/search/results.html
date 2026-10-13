@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "macros.html" import empty, member_status, tournament_status %}
+{% block content %}
+<div class="page-head"><div><h1>Поиск</h1><div class="sub">{% if q %}Результаты по запросу «{{ q }}»{% else %}Введите запрос в строке поиска{% endif %}</div></div></div>
+{% if q|length < 2 %}
+<div class="card">{{ empty("Слишком короткий запрос", "Введите не меньше 2 символов.", "search") }}</div>
+{% elif not (results.players or results.clubs or results.tournaments) %}
+<div class="card">{{ empty("Ничего не найдено", "Попробуйте изменить запрос.", "search") }}</div>
+{% else %}
+<div class="grid grid-3">
+  <div class="card"><h2>Игроки ({{ results.players|length }})</h2>
+    {% if results.players %}<ul class="list">{% for m in results.players %}<li><a href="/players/{{ m.id }}">{{ m.full_name }}</a>{{ member_status(m.status) }}</li>{% endfor %}</ul>{% else %}<p class="muted">Нет совпадений или нет доступа.</p>{% endif %}
+  </div>
+  <div class="card"><h2>Клубы ({{ results.clubs|length }})</h2>
+    {% if results.clubs %}<ul class="list">{% for c in results.clubs %}<li><a href="/clubs/{{ c.id }}">{{ c.name }}</a></li>{% endfor %}</ul>{% else %}<p class="muted">Нет совпадений или нет доступа.</p>{% endif %}
+  </div>
+  <div class="card"><h2>Турниры ({{ results.tournaments|length }})</h2>
+    {% if results.tournaments %}<ul class="list">{% for t in results.tournaments %}<li><a href="/tournaments/{{ t.id }}">{{ t.name }}</a>{{ tournament_status(t.status) }}</li>{% endfor %}</ul>{% else %}<p class="muted">Нет совпадений или нет доступа.</p>{% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

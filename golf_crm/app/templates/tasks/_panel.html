@@ -1,0 +1,14 @@
+{# Slide-over content (#panel-content). #}
+<div class="modal-head">
+  <div style="min-width:0">
+    <div class="muted small">Задача №{{ task.id }}</div>
+    <h2 id="panel-title">{{ task.title }}</h2>
+  </div>
+  <div class="actions" style="flex-wrap:nowrap">
+    <a class="btn btn-sm btn-ghost" href="/tasks/{{ task.id }}">Открыть</a>
+    <button type="button" class="close-btn" data-close aria-label="Закрыть">×</button>
+  </div>
+</div>
+<div class="modal-body">
+  {% include "tasks/_detail.html" %}
+</div>

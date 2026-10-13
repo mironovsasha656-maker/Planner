@@ -1,0 +1,19 @@
+{% if preview.error %}
+<p class="muted">{{ preview.error }}</p>
+{% else %}{% set r = preview.result %}
+<p><strong>{{ r.label }}</strong></p>
+<div class="grid grid-3 mb">
+  <div class="stat card accent"><div class="label">Получат письмо</div><div class="value">{{ r.recipients|length }}</div></div>
+  <div class="stat card {% if r.no_consent %}warn{% endif %}"><div class="label">Нет согласия на ПДн</div><div class="value">{{ r.no_consent|length }}</div></div>
+  <div class="stat card"><div class="label">Нет e-mail</div><div class="value">{{ r.no_email|length }}</div></div>
+</div>
+{% if r.recipients %}
+<div class="table-wrap" style="max-height: 360px; overflow-y: auto"><table class="table">
+  <thead><tr><th>Получатель</th><th>E-mail</th></tr></thead>
+  <tbody>
+  {% for m in r.recipients %}<tr><td>{{ m.full_name }}</td><td class="small">{{ m.email }}</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+{% else %}<p class="muted">В сегменте нет получателей.</p>{% endif %}
+{% if r.no_consent %}<p class="small muted mt">Исключены (нет согласия на обработку ПДн): {% for m in r.no_consent %}{{ m.short_name }}{% if not loop.last %}, {% endif %}{% endfor %}.</p>{% endif %}
+{% endif %}

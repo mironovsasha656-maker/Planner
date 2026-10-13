@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% endblock %} — {{ t.name }}</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body class="paper">
+<div class="print-page">
+  <div class="print-toolbar">
+    <button class="btn btn-primary" type="button" data-print>Печать</button>
+    <a class="btn" href="/tournaments/{{ t.id }}">Вернуться к турниру</a>
+  </div>
+  <div class="center small">Федерация гольфа Московской области</div>
+  {% block body %}{% endblock %}
+  <div class="signatures">
+    <div>Главный судья турнира</div>
+    <div>Секретарь турнира</div>
+  </div>
+  <p class="small muted center mt">Документ сформирован {{ today|date }} в демо-версии CRM. Все данные вымышлены.</p>
+</div>
+<script src="/static/js/app.js"></script>
+</body>
+</html>

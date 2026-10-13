@@ -1,0 +1,43 @@
+{% from "macros.html" import member_status, empty, pagination, sort_th %}
+{% if members %}
+<div class="table-wrap">
+<table class="table">
+  <thead>
+    <tr>
+      {{ sort_th("ФИО", "name", params, "/players") }}
+      {{ sort_th("Лицензия", "license", params, "/players") }}
+      {{ sort_th("Клуб", "club", params, "/players") }}
+      {{ sort_th("Возраст", "age", params, "/players") }}
+      <th>Категория</th>
+      {{ sort_th("Гандикап", "hcp", params, "/players", "th-num") }}
+      {{ sort_th("Статус", "status", params, "/players") }}
+      {{ sort_th("В Федерации с", "join", params, "/players") }}
+    </tr>
+  </thead>
+  <tbody>
+    {% for m in members %}
+    <tr class="{% if m.status == 'suspended' %}row-muted{% endif %}">
+      <td><a href="/players/{{ m.id }}">{{ m.full_name }}</a><div class="muted small">{{ m.city }}</div></td>
+      <td class="nowrap">{{ m.license_number }}</td>
+      <td>{{ m.club.name if m.club else "—" }}</td>
+      <td class="nowrap">{{ m.age }}</td>
+      <td>{{ L.AGE_CATEGORY[m.age_category] }}</td>
+      <td class="num"><strong>{{ m.handicap_index|dec }}</strong></td>
+      <td>{{ member_status(m.status) }}</td>
+      <td class="nowrap">{{ m.join_date|date }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+<div class="table-foot">
+  <span>Найдено: {{ total }} {{ plural(total, "игрок", "игрока", "игроков") }} · страница {{ page }} из {{ pages }}</span>
+  {{ pagination(page, pages, params, "/players") }}
+</div>
+{% else %}
+{{ empty("Игроки не найдены", "Измените условия поиска или сбросьте фильтры.", "users") }}
+{% endif %}
+{% if is_htmx %}
+<input type="hidden" id="sort-input" name="sort" value="{{ params.sort }}" hx-swap-oob="true">
+<a id="export-link" class="btn" hx-swap-oob="true" href="/players/export.csv?{{ query_string(params) }}">Экспорт в CSV</a>
+{% endif %}

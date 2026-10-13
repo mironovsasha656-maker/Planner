@@ -1,0 +1,21 @@
+{% extends "print/base.html" %}
+{% block title %}{{ "Итоговый протокол" if t.status == "finished" else "Промежуточный протокол" }}{% endblock %}
+{% block body %}
+<h1>{{ "Итоговый протокол" if t.status == "finished" else "Промежуточные результаты" }}</h1>
+<div class="subtitle">
+  <strong>{{ t.name }}</strong><br>
+  {{ t.start_date|date }}{% if t.end_date != t.start_date %} – {{ t.end_date|date }}{% endif %} · {{ t.course.club.name }}, {{ t.course.name }}<br>
+  {{ L.TOURNAMENT_FORMAT[t.format] }}, {{ t.rounds_count }} {{ plural(t.rounds_count, "раунд", "раунда", "раундов") }}
+</div>
+{% if overall.rows %}
+<h2>{{ overall.title }}</h2>
+{% with board=overall, link=False %}{% include "tournaments/_board.html" %}{% endwith %}
+{% for board in cat_boards %}
+<h2 class="mt">Зачёт: {{ board.title }}</h2>
+{% with link=False %}{% include "tournaments/_board.html" %}{% endwith %}
+{% endfor %}
+<p class="small mt">T — разделённое место. CH — course handicap (гандикап на поле). Очки стейблфорд рассчитаны упрощённо по сумме ударов за раунд (без данных по отдельным лункам).</p>
+{% else %}
+<p class="center muted">Результатов нет.</p>
+{% endif %}
+{% endblock %}

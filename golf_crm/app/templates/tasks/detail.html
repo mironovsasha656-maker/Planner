@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="breadcrumbs">{% if me.is_director %}<a href="/tasks">Задачи</a>{% else %}<a href="/tasks/my">Мои задачи</a>{% endif %} / №{{ task.id }}</div>
+<div class="page-head"><div><h1>{{ task.title }}</h1><div class="sub">Создана {{ fmt_dt(task.created_at) }}</div></div></div>
+<div class="card" style="max-width: 760px">
+  {% include "tasks/_detail.html" %}
+</div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% from "macros.html" import member_status, tournament_status, tee, empty %}
+{% block content %}
+<div class="breadcrumbs"><a href="/clubs">Клубы и поля</a> / {{ club.name }}</div>
+<div class="page-head">
+  <div><h1>{{ club.name }}</h1><div class="sub">{{ club.district }}</div></div>
+</div>
+
+<div class="grid grid-3 mb">
+  <div class="card span-2">
+    <h2>Информация</h2>
+    <dl class="props">
+      <dt>Адрес</dt><dd>{{ club.address }}</dd>
+      <dt>Контактное лицо</dt><dd>{{ club.contact_person }}</dd>
+      <dt>Телефон</dt><dd>{{ club.phone }}</dd>
+      <dt>Сайт</dt><dd>{{ club.website }} <span class="muted small">(вымышленный адрес)</span></dd>
+      <dt>Количество лунок</dt><dd>{{ club.holes }}</dd>
+    </dl>
+  </div>
+  <div class="grid" style="grid-template-columns: 1fr 1fr">
+    <div class="card stat"><div class="label">Игроков</div><div class="value">{{ members|length }}</div><div class="hint">активных: {{ active_count }}</div></div>
+    <div class="card stat"><div class="label">Средний гандикап</div><div class="value">{{ avg_hcp|dec }}</div></div>
+  </div>
+</div>
+
+{% for course in club.courses %}
+<div class="card flush mb">
+  <div class="card-head"><h2>{{ course.name }}</h2><span class="muted">{{ course.holes }} лунок{% if course.holes == 9 %} · рейтинги указаны для 18 лунок (2 круга){% endif %}</span></div>
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Ти</th><th class="th-num">Course Rating</th><th class="th-num">Slope Rating</th><th class="th-num">Пар</th></tr></thead>
+    <tbody>
+    {% for t in course.tees %}
+      <tr><td>{{ tee(t.color) }}</td><td class="num">{{ t.course_rating|dec }}</td><td class="num">{{ t.slope_rating }}</td><td class="num">{{ t.par }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+{% endfor %}
+
+<div class="grid grid-2">
+  <div class="card flush">
+    <div class="card-head"><h2>Игроки клуба</h2>{% if can("players") %}<a class="small" href="/players?club={{ club.id }}">Открыть в реестре</a>{% endif %}</div>
+    {% if members %}
+    <div class="table-wrap" style="max-height: 480px; overflow-y: auto"><table class="table">
+      <thead><tr><th>ФИО</th><th class="th-num">Гандикап</th><th>Статус</th></tr></thead>
+      <tbody>
+      {% for m in members %}
+        <tr><td>{% if can("players") %}<a href="/players/{{ m.id }}">{{ m.full_name }}</a>{% else %}{{ m.full_name }}{% endif %}</td><td class="num">{{ m.handicap_index|dec }}</td><td>{{ member_status(m.status) }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}{{ empty("В клубе пока нет игроков", icon_name="users") }}{% endif %}
+  </div>
+  <div class="card flush">
+    <div class="card-head"><h2>Турниры на полях клуба</h2></div>
+    {% if tournaments %}
+    <div class="table-wrap"><table class="table">
+      <thead><tr><th>Турнир</th><th>Дата</th><th>Статус</th></tr></thead>
+      <tbody>
+      {% for t in tournaments %}
+        <tr><td>{% if can("tournaments") %}<a href="/tournaments/{{ t.id }}">{{ t.name }}</a>{% else %}{{ t.name }}{% endif %}</td><td class="nowrap">{{ t.start_date|date }}</td><td>{{ tournament_status(t.status) }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}{{ empty("Турниров не было", icon_name="trophy") }}{% endif %}
+  </div>
+</div>
+{% endblock %}

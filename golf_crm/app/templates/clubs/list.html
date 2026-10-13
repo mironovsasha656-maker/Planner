@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "macros.html" import empty %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Клубы и поля</h1><div class="sub">Клубы — члены Федерации и их поля</div></div>
+</div>
+{% if rows %}
+<div class="grid grid-3">
+  {% for club, n in rows %}
+  <a class="card" href="/clubs/{{ club.id }}" style="color:inherit; text-decoration:none">
+    <h2>{{ club.name }}</h2>
+    <div class="muted small mb">{{ club.district }}</div>
+    <dl class="props" style="grid-template-columns: 120px 1fr">
+      <dt>Игроков</dt><dd><strong>{{ n }}</strong></dd>
+      <dt>Лунок</dt><dd>{{ club.holes }}</dd>
+      <dt>Поля</dt><dd>{% for c in club.courses %}{{ c.name }} ({{ c.holes }}){% if not loop.last %}, {% endif %}{% endfor %}</dd>
+      <dt>Контакт</dt><dd>{{ club.contact_person }}</dd>
+    </dl>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card">{{ empty("Клубов пока нет", icon_name="flag") }}</div>
+{% endif %}
+{% endblock %}

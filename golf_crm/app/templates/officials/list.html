@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from "macros.html" import empty %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Судьи и тренеры</h1><div class="sub">Аттестованные специалисты Федерации</div></div>
+  {% if can("officials", True) %}<a class="btn btn-primary" href="/officials/new">+ Добавить</a>{% endif %}
+</div>
+
+{% if expired or expiring %}
+<div class="alert">
+  {% if expired %}Истекла аттестация: <strong>{{ expired }}</strong>. {% endif %}
+  {% if expiring %}Истекает в ближайшие {{ warn_days }} дней: <strong>{{ expiring }}</strong>.{% endif %}
+  Обновите аттестацию, чтобы специалист мог работать на турнирах.
+</div>
+{% endif %}
+
+<div class="card flush">
+  <div class="filters">
+    <div class="tabs" style="margin:0;border:0">
+      <a href="/officials" class="{% if not role_filter %}active{% endif %}">Все</a>
+      {% for c, l in L.OFFICIAL_ROLE.items() %}<a href="/officials?role={{ c }}" class="{% if role_filter == c %}active{% endif %}">{{ l }}</a>{% endfor %}
+    </div>
+  </div>
+  {% if officials %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>ФИО</th><th>Роль</th><th>Квалификация</th><th>Клуб</th><th>Аттестация до</th><th>Контакты</th>{% if can("officials", True) %}<th></th>{% endif %}</tr></thead>
+    <tbody>
+    {% for o in officials %}{% set d = o.days_to_expiry %}
+      <tr class="{% if d < 0 %}row-danger{% elif d < warn_days %}row-warn{% endif %}">
+        <td><strong>{{ o.full_name }}</strong></td>
+        <td>{{ L.OFFICIAL_ROLE[o.role] }}</td>
+        <td>{{ o.qualification }}</td>
+        <td class="small">{{ o.club.name if o.club else "—" }}</td>
+        <td class="nowrap">{{ o.cert_expiry|date }}
+          {% if d < 0 %}<div><span class="badge red">Истекла {{ -d }} {{ plural(-d, "день", "дня", "дней") }} назад</span></div>
+          {% elif d < warn_days %}<div><span class="badge amber">Истекает через {{ d }} {{ plural(d, "день", "дня", "дней") }}</span></div>{% endif %}
+        </td>
+        <td class="small">{{ o.phone }}<br>{{ o.email }}</td>
+        {% if can("officials", True) %}<td class="actions-cell"><a class="btn btn-sm" href="/officials/{{ o.id }}/edit">Изменить</a></td>{% endif %}
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}{{ empty("Специалисты не найдены", icon_name="whistle") }}{% endif %}
+</div>
+{% endblock %}

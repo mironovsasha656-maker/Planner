@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% from "macros.html" import tournament_status, empty %}
+{% macro rows(items) %}
+<div class="table-wrap"><table class="table">
+  <thead><tr><th>Турнир</th><th>Даты</th><th>Поле</th><th>Формат</th><th class="th-num">Взнос</th><th>Участники</th><th>Статус</th></tr></thead>
+  <tbody>
+  {% for t in items %}
+  <tr>
+    <td><a href="/tournaments/{{ t.id }}">{{ t.name }}</a></td>
+    <td class="nowrap">{{ t.start_date|date }}{% if t.end_date != t.start_date %} – {{ t.end_date|date }}{% endif %}</td>
+    <td>{{ t.course.club.name }}<div class="muted small">{{ t.course.name }}</div></td>
+    <td>{{ L.TOURNAMENT_FORMAT[t.format] }}<div class="muted small">{{ t.rounds_count }} {{ plural(t.rounds_count, "раунд", "раунда", "раундов") }}</div></td>
+    <td class="num">{{ t.entry_fee|money }}</td>
+    <td style="min-width:140px">
+      <div class="small">{{ t.occupied }} / {{ t.max_participants }}{% if t.waitlist_count %} · ожидают: {{ t.waitlist_count }}{% endif %}</div>
+      <div class="bar {% if t.is_full %}full{% endif %}"><span style="width: {{ [100, (100 * t.occupied / t.max_participants)|round|int]|min }}%"></span></div>
+    </td>
+    <td>{{ tournament_status(t.status) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% endmacro %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Турниры</h1><div class="sub">Календарь соревнований Федерации</div></div>
+  <div class="actions">
+    <div class="tabs" style="margin:0;border:0">
+      <a href="/tournaments" class="{% if view != 'calendar' %}active{% endif %}">Список</a>
+      <a href="/tournaments?view=calendar" class="{% if view == 'calendar' %}active{% endif %}">Календарь</a>
+    </div>
+    {% if can("tournaments", True) %}<a class="btn btn-primary" href="/tournaments/new">+ Новый турнир</a>{% endif %}
+  </div>
+</div>
+
+{% if view == "calendar" %}
+<div class="card">
+  <div class="card-head">
+    <a class="btn btn-sm" href="/tournaments?view=calendar&month={{ prev_month.strftime('%Y-%m') }}">‹ {{ L.MONTHS[prev_month.month - 1] }}</a>
+    <h2>{{ month_label }}</h2>
+    <a class="btn btn-sm" href="/tournaments?view=calendar&month={{ next_month.strftime('%Y-%m') }}">{{ L.MONTHS[next_month.month - 1] }} ›</a>
+  </div>
+  <div class="calendar">
+    {% for wd in weekdays %}<div class="dow">{{ wd }}</div>{% endfor %}
+    {% for week in weeks %}{% for d in week %}
+    <div class="day {% if d.month != first.month %}other{% endif %} {% if d == today %}today{% endif %}">
+      <div class="n">{{ d.day }}</div>
+      {% for t in events.get(d, []) %}<a class="ev st-{{ t.status }}" href="/tournaments/{{ t.id }}" title="{{ t.name }} — {{ L.TOURNAMENT_STATUS[t.status] }}">{{ t.name }}</a>{% endfor %}
+    </div>
+    {% endfor %}{% endfor %}
+  </div>
+  <div class="actions mt small">
+    {% for code, label in L.TOURNAMENT_STATUS.items() %}<span class="ev st-{{ code }}" style="display:inline-block;padding:2px 8px;border-radius:4px">{{ label }}</span>{% endfor %}
+  </div>
+</div>
+{% else %}
+<div class="card flush mb">
+  <div class="card-head"><h2>Текущие и предстоящие</h2></div>
+  {% if upcoming %}{{ rows(upcoming) }}{% else %}{{ empty("Нет предстоящих турниров", icon_name="trophy") }}{% endif %}
+</div>
+<div class="card flush">
+  <div class="card-head"><h2>Прошедшие и отменённые</h2></div>
+  {% if past %}{{ rows(past) }}{% else %}{{ empty("Прошедших турниров нет", icon_name="trophy") }}{% endif %}
+</div>
+{% endif %}
+{% endblock %}

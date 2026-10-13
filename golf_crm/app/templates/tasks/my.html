@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% from "macros.html" import task_status, priority, empty, icon %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Мои задачи</h1><div class="sub">{{ me.name }} · {{ me.position }}</div></div>
+  <nav class="segmented" aria-label="Показать">
+    <a href="/tasks/my?show=active" class="{% if show == 'active' %}active{% endif %}">Активные <span class="muted">{{ counts.active }}</span></a>
+    <a href="/tasks/my?show=done" class="{% if show == 'done' %}active{% endif %}">Завершённые</a>
+    <a href="/tasks/my?show=all" class="{% if show == 'all' %}active{% endif %}">Все</a>
+  </nav>
+</div>
+
+<div id="task-list" hx-get="/tasks/my?show={{ show }}" hx-trigger="tasksChanged from:body" hx-select="#task-list" hx-swap="outerHTML" hx-disinherit="*">
+<div class="grid grid-4 mb">
+  <div class="card stat accent"><div class="label">Активные</div><div class="value">{{ counts.active }}</div></div>
+  <div class="card stat {% if counts.overdue %}danger{% endif %}"><div class="label">Просрочены</div><div class="value">{{ counts.overdue }}</div></div>
+  <div class="card stat {% if counts.due_today %}warn{% endif %}"><div class="label">Срок сегодня</div><div class="value">{{ counts.due_today }}</div></div>
+  <div class="card stat"><div class="label">Выполнено</div><div class="value">{{ counts.done }}</div><div class="hint">досрочно: {{ counts.early }}</div></div>
+</div>
+
+{% set ns = namespace(total=0) %}{% for _t, _c, items in groups %}{% set ns.total = ns.total + items|length %}{% endfor %}
+{% if not ns.total %}
+<div class="card">{{ empty("Задач нет" if show != "done" else "Завершённых задач пока нет", "Новые поручения директора появятся здесь, а вы получите уведомление." if show != "done" else "", "check") }}</div>
+{% endif %}
+
+{% for title, code, rows in groups %}{% if rows %}
+<div class="section-title">{% if code == "overdue" %}<span class="badge red dot">{{ title }}</span>{% else %}{{ title }}{% endif %} <span class="count">{{ rows|length }}</span></div>
+<div class="task-list">
+  {% for r in rows %}{% set t = r.t %}
+  <article class="task-card {% if not t.is_open %}is-done{% endif %}">
+    <div class="main-col">
+      <a class="title" href="/tasks/{{ t.id }}" hx-get="/tasks/{{ t.id }}/panel" hx-target="#panel-content" hx-push-url="false" onclick="event.preventDefault()">{{ t.title }}</a>
+      <div class="desc">{{ t.description }}</div>
+      <div class="meta">
+        {{ priority(t.priority) }}
+        <span class="nowrap">{{ icon("clock") }} {{ t.due_at.strftime("%d.%m.%Y %H:%M") }}
+          {% if r.overdue %}<span style="color: var(--danger)">· просрочена на {{ r.left }}</span>{% elif t.is_open %}· осталось {{ r.left }}{% elif t.status == "done" %}· {{ r.timing }}{% endif %}</span>
+        {% if r.related %}<span>{{ r.related.type }}: <a href="{{ r.related.url }}">{{ r.related.name }}</a></span>{% endif %}
+        {% if not t.is_open %}{{ task_status(t.display_status, t.is_early) }}{% endif %}
+      </div>
+    </div>
+    <div class="side">
+      {% if t.status == "new" %}
+      <form method="post" action="/tasks/{{ t.id }}/start" hx-post="/tasks/{{ t.id }}/start" hx-swap="none"><button class="btn btn-sm" type="submit">Взять в работу</button></form>
+      {% endif %}
+      {% if t.is_open %}
+      <form method="post" action="/tasks/{{ t.id }}/complete" hx-post="/tasks/{{ t.id }}/complete" hx-swap="none"><button class="btn btn-sm btn-primary" type="submit" title="Отметить выполненной{% if not r.overdue %} (досрочно){% endif %}">{{ icon("check") }} Выполнено</button></form>
+      {% endif %}
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% endif %}{% endfor %}
+</div>
+{% endblock %}

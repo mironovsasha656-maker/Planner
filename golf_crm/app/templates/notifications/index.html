@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% from "macros.html" import empty %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Уведомления</h1><div class="sub">События по задачам: новые поручения, взятие в работу, выполнение, просрочки, отмены</div></div>
+  <div class="actions">
+    <nav class="segmented" aria-label="Показать">
+      <a href="/notifications" class="{% if show != 'unread' %}active{% endif %}">Все</a>
+      <a href="/notifications?show=unread" class="{% if show == 'unread' %}active{% endif %}">Непрочитанные <span class="muted">{{ unread }}</span></a>
+    </nav>
+    {% if unread %}<form method="post" action="/notifications/read-all"><button class="btn" type="submit">Прочитать все</button></form>{% endif %}
+  </div>
+</div>
+<div class="card flush" style="max-width: 860px">
+  {% if items %}
+  {% for n in items %}
+  <a class="notif-item {% if not n.is_read %}unread{% endif %} {% if n.type == 'task_overdue' %}overdue{% endif %}" href="/notifications/{{ n.id }}/open" style="padding:14px 20px">
+    <span class="mark"></span>
+    <span><span class="text">{{ n.text }}</span><div class="when">{{ L.NOTIFICATION_TYPE.get(n.type, "") }} · {{ n.created_at.strftime("%d.%m.%Y %H:%M") }}</div></span>
+  </a>
+  {% endfor %}
+  {% else %}
+  {{ empty("Уведомлений нет" if show != "unread" else "Все уведомления прочитаны", "", "bell") }}
+  {% endif %}
+</div>
+{% endblock %}

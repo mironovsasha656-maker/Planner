@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Игроки</h1>
+    <div class="sub">Реестр членов Федерации</div>
+  </div>
+  <div class="actions">
+    <a class="btn" id="export-link" href="/players/export.csv?{{ query_string(params) }}">Экспорт в CSV</a>
+    {% if can("players", True) %}<a class="btn btn-primary" href="/players/new">+ Новый игрок</a>{% endif %}
+  </div>
+</div>
+
+<div class="card flush">
+  <form class="filters" method="get" action="/players"
+        hx-get="/players" hx-target="#results" hx-push-url="true"
+        hx-trigger="change, input changed delay:350ms from:.live-input">
+    <div class="field grow">
+      <label for="q">Поиск</label>
+      <input type="search" class="live-input" id="q" name="q" value="{{ params.q }}" placeholder="ФИО, e-mail, телефон, лицензия" maxlength="100">
+    </div>
+    <div class="field">
+      <label for="club">Клуб</label>
+      <select id="club" name="club">
+        <option value="">Все клубы</option>
+        {% for c in clubs %}<option value="{{ c.id }}" {% if params.club == c.id|string %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="status">Статус</label>
+      <select id="status" name="status">
+        <option value="">Любой</option>
+        {% for code, label in L.MEMBER_STATUS.items() %}<option value="{{ code }}" {% if params.status == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="age">Возрастная категория</label>
+      <select id="age" name="age">
+        <option value="">Все</option>
+        {% for code, label in L.AGE_CATEGORY.items() %}<option value="{{ code }}" {% if params.age == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>Гандикап, от–до</label>
+      <div class="range">
+        <input type="text" class="live-input" name="hcp_min" value="{{ params.hcp_min }}" placeholder="0,0" inputmode="decimal" aria-label="Гандикап от" maxlength="6">
+        <span>–</span>
+        <input type="text" class="live-input" name="hcp_max" value="{{ params.hcp_max }}" placeholder="54,0" inputmode="decimal" aria-label="Гандикап до" maxlength="6">
+      </div>
+    </div>
+    <input type="hidden" id="sort-input" name="sort" value="{{ params.sort }}">
+    <noscript><button class="btn btn-sm" type="submit">Применить</button></noscript>
+    <a class="btn btn-sm" href="/players">Сбросить</a>
+  </form>
+  <div id="results">
+    {% include "players/_table.html" %}
+  </div>
+</div>
+{% endblock %}

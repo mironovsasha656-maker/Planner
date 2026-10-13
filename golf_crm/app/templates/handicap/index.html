@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "macros.html" import member_status, empty %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Гандикап</h1><div class="sub">Индексы гандикапа игроков и пересчёт</div></div>
+  {% if can("handicap", True) %}
+  <form method="post" action="/handicap/recalc-all">
+    <button class="btn btn-primary" type="submit" data-confirm="Пересчитать индекс гандикапа у всех {{ total }} игроков по их раундам?">Пересчитать всех</button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="alert info">
+  <strong>Упрощённая демонстрационная реализация, не сертифицированный расчёт по правилам R&amp;A/USGA (WHS).</strong><br>
+  Дифференциал = (113 / Slope) × (скорректированный гросс − Course Rating). Индекс — среднее лучших 8 дифференциалов из последних 20.
+  При меньшем числе раундов: 3 → минимальный − 2,0; 4 → минимальный − 1,0; 5 → минимальный; 6 → среднее 2 лучших − 1,0; 7–8 → 2 лучших; 9–11 → 3; 12–14 → 4; 15–16 → 5; 17–18 → 6; 19 → 7.
+  Не реализованы: корректировка net double bogey по лункам, PCC, мягкий/жёсткий лимит роста, снижение за исключительный результат.
+</div>
+
+<div class="grid grid-3 mb">
+  <div class="card stat accent"><div class="label">Игроков</div><div class="value">{{ total }}</div></div>
+  <a class="card stat {% if stale_count %}warn{% endif %}" href="/handicap?stale=1"><div class="label">Индекс требует пересчёта</div><div class="value">{{ stale_count }}</div><div class="hint">расчёт по раундам отличается от сохранённого</div></a>
+  <div class="card stat"><div class="label">Меньше 3 раундов</div><div class="value">{{ few_rounds }}</div><div class="hint">индекс задан вручную</div></div>
+</div>
+
+<div class="card flush">
+  <div class="card-head">
+    <h2>{{ "Требуют пересчёта" if only_stale else "Все игроки" }}</h2>
+    {% if only_stale %}<a class="small" href="/handicap">Показать всех</a>{% else %}<a class="small" href="/handicap?stale=1">Только требующие пересчёта</a>{% endif %}
+  </div>
+  {% if rows %}
+  <div class="table-wrap" style="max-height: 640px; overflow-y: auto"><table class="table">
+    <thead><tr><th>Игрок</th><th>Клуб</th><th class="th-num">Раундов</th><th>Последний раунд</th><th class="th-num">Индекс</th><th class="th-num">По раундам</th><th>Обновлён</th><th></th></tr></thead>
+    <tbody>
+    {% for r in rows %}{% set m = r.m %}
+      <tr class="{% if r.stale %}row-warn{% endif %}">
+        <td><a href="/players/{{ m.id }}?tab=handicap">{{ m.full_name }}</a></td>
+        <td class="small">{{ m.club.name if m.club else "—" }}</td>
+        <td class="num">{{ r.rounds }}</td>
+        <td class="nowrap">{{ r.last|date }}</td>
+        <td class="num"><strong>{{ m.handicap_index|dec }}</strong></td>
+        <td class="num">{{ r.calc|dec }}</td>
+        <td class="nowrap small">{{ m.handicap_updated_at|datetime }}</td>
+        <td>{% if r.stale %}<span class="badge amber">Устарел</span>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}{{ empty("Все индексы актуальны", "Расчёт по раундам совпадает с сохранёнными значениями.", "chart") }}{% endif %}
+</div>
+{% endblock %}

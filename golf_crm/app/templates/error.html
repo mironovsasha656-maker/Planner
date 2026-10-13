@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% from "macros.html" import empty %}
+{% block content %}
+<div class="page-head"><h1>{{ title }}</h1></div>
+<div class="card">
+  {{ empty(title, text) }}
+  <p class="center"><a class="btn" href="/">На дашборд</a></p>
+</div>
+{% endblock %}

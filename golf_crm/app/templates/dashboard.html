@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% from "macros.html" import tournament_status, empty %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Дашборд</h1>
+    <div class="sub">Сводка по Федерации на {{ today|date_long }}</div>
+  </div>
+</div>
+
+<div class="grid grid-6 mb">
+  <a class="card stat accent" href="/players"><div class="label">Всего игроков</div><div class="value">{{ total|num }}</div><div class="hint">в реестре Федерации</div></a>
+  <a class="card stat accent" href="/players?status=active"><div class="label">Активные</div><div class="value">{{ active_count|num }}</div><div class="hint">{{ (100 * active_count / total)|round|int if total else 0 }}% от всех</div></a>
+  <a class="card stat danger" href="/players?status=unpaid"><div class="label">Не оплатили взнос</div><div class="value">{{ unpaid|num }}</div><div class="hint">членский взнос {{ today.year }}</div></a>
+  <a class="card stat" href="/tournaments"><div class="label">Ближайшие турниры</div><div class="value">{{ upcoming|length }}</div><div class="hint">идут и запланированы</div></a>
+  {% if show_finance %}
+  <a class="card stat" href="/finance?tab=summary"><div class="label">Поступления за месяц</div><div class="value">{{ revenue_month|money }}</div><div class="hint">{{ L.MONTHS[today.month - 1]|lower }} {{ today.year }}</div></a>
+  <a class="card stat" href="/finance?tab=summary"><div class="label">Поступления за год</div><div class="value">{{ revenue_year|money }}</div><div class="hint">с 1 января {{ today.year }}</div></a>
+  {% endif %}
+</div>
+
+{% set ts = task_summary %}
+<div class="card mb" style="padding:16px 20px">
+  <div class="card-head" style="margin-bottom:10px">
+    <h2>{{ "Задачи команды" if user.is_director else "Мои задачи" }}</h2>
+    <div class="actions">
+      <span class="muted small">открыто {{ ts.open }} · выполнено за неделю {{ ts.done_week }}{% if ts.early_week %} (досрочно {{ ts.early_week }}){% endif %}</span>
+      {% if ts.overdue %}<span class="badge red dot">просрочено {{ ts.overdue|length }}</span>{% endif %}
+      <a class="btn btn-sm" href="{{ '/tasks' if user.is_director else '/tasks/my' }}">Все задачи</a>
+    </div>
+  </div>
+  {% set upcoming_tasks = ts.overdue + ts.next %}
+  {% if upcoming_tasks %}
+  <ul class="list">
+    {% for t in upcoming_tasks[:5] %}
+    <li>
+      <div><a href="/tasks/{{ t.id }}" hx-get="/tasks/{{ t.id }}/panel" hx-target="#panel-content" onclick="event.preventDefault()">{{ t.title }}</a>
+        <div class="meta">{% if user.is_director %}{{ t.assignee.name }} · {% endif %}срок {{ t.due_at.strftime("%d.%m.%Y %H:%M") }}</div></div>
+      {% if t.is_overdue(now) %}<span class="badge red dot">Просрочена</span>{% elif t.status == "in_progress" %}<span class="badge green">В работе</span>{% else %}<span class="badge">Новая</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted" style="margin:0">Открытых задач нет.</p>
+  {% endif %}
+</div>
+
+<div class="grid grid-3 mb">
+  <div class="card span-2">
+    <div class="card-head"><h2>Численность игроков</h2><span class="muted small">последние 12 месяцев · в подсказке — новые за месяц</span></div>
+    <div class="chart-box"><canvas id="growth-chart" aria-label="График численности игроков"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Распределение по гандикапу</h2></div>
+    <div class="chart-box"><canvas id="hcp-chart" aria-label="Распределение игроков по гандикапу"></canvas></div>
+  </div>
+</div>
+
+<div class="grid grid-3">
+  <div class="card">
+    <div class="card-head"><h2>Требует внимания</h2></div>
+    <ul class="list attention">
+      {% if overdue_payments %}
+      <li><div class="item"><span class="dot red"></span><div>
+        <strong>Просрочено платежей: {{ overdue_payments|length }}</strong> на сумму {{ overdue_sum|money }}
+        <div class="meta">{% for p in overdue_payments[:3] %}{{ p.member.short_name }}{% if not loop.last %}, {% endif %}{% endfor %}{% if overdue_payments|length > 3 %} и ещё {{ overdue_payments|length - 3 }}{% endif %}</div>
+      </div></div>{% if can("finance") %}<a class="btn btn-sm" href="/finance?tab=debtors">Открыть</a>{% endif %}</li>
+      {% endif %}
+      {% for o in expiring %}
+      <li><div class="item"><span class="dot {{ 'red' if o.days_to_expiry < 0 else 'amber' }}"></span><div>
+        <strong>{{ o.full_name }}</strong>
+        <div class="meta">{{ L.OFFICIAL_ROLE[o.role] }} · {% if o.days_to_expiry < 0 %}аттестация истекла {{ o.cert_expiry|date }}{% else %}аттестация до {{ o.cert_expiry|date }} (через {{ o.days_to_expiry }} {{ plural(o.days_to_expiry, "день", "дня", "дней") }}){% endif %}</div>
+      </div></div>{% if can("officials") %}<a class="btn btn-sm" href="/officials">Открыть</a>{% endif %}</li>
+      {% endfor %}
+      {% for t in full %}
+      <li><div class="item"><span class="dot blue"></span><div>
+        <strong>{{ t.name }}</strong>: лимит участников достигнут
+        <div class="meta">{{ t.occupied }} из {{ t.max_participants }}, в листе ожидания: {{ t.waitlist_count }}</div>
+      </div></div>{% if can("tournaments") %}<a class="btn btn-sm" href="/tournaments/{{ t.id }}?tab=registrations">Открыть</a>{% endif %}</li>
+      {% endfor %}
+      {% if not overdue_payments and not expiring and not full %}
+      <li>{{ empty("Всё в порядке", "Нет просрочек, истекающих аттестаций и переполненных турниров.") }}</li>
+      {% endif %}
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Ближайшие турниры</h2>{% if can("tournaments") %}<a class="small" href="/tournaments?view=calendar">Календарь</a>{% endif %}</div>
+    {% if upcoming %}
+    <ul class="list">
+      {% for t in upcoming[:6] %}
+      <li>
+        <div>
+          {% if can("tournaments") %}<a href="/tournaments/{{ t.id }}">{{ t.name }}</a>{% else %}{{ t.name }}{% endif %}
+          <div class="meta">{{ t.start_date|date }}{% if t.end_date != t.start_date %} – {{ t.end_date|date }}{% endif %} · {{ t.course.club.name }}</div>
+        </div>
+        <div class="center">{{ tournament_status(t.status) }}<div class="meta">{{ t.occupied }}/{{ t.max_participants }}</div></div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}{{ empty("Нет запланированных турниров") }}{% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Топ-5 клубов по числу игроков</h2></div>
+    {% set max_n = club_rows[0][1] if club_rows else 1 %}
+    <ul class="list">
+      {% for club, n in club_rows %}
+      <li>
+        <div style="flex:1">
+          {% if can("clubs") %}<a href="/clubs/{{ club.id }}">{{ club.name }}</a>{% else %}{{ club.name }}{% endif %}
+          <div class="bar mt" style="margin-top:6px"><span style="width: {{ (100 * n / max_n)|round|int }}%"></span></div>
+        </div>
+        <strong class="num">{{ n }}</strong>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var c = GolfCRM.colors;
+  var growth = {{ growth|tojson }};
+  GolfCRM.chart("growth-chart", {
+    type: "line",
+    data: {
+      labels: growth.labels,
+      datasets: [{ label: "Игроков в реестре", data: growth.total, borderColor: c.accent, backgroundColor: c.accentSoft,
+                   fill: true, tension: .3, borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, pointHoverBorderWidth: 2,
+                   pointHoverBorderColor: c.surface, pointHoverBackgroundColor: c.accent }]
+    },
+    options: {
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: {
+          label: function (ctx) { return "Всего игроков: " + GolfCRM.formatNumber(ctx.parsed.y); },
+          afterLabel: function (ctx) { return "Новых за месяц: " + growth["new"][ctx.dataIndex]; }
+        } }
+      },
+      scales: {
+        y: { grid: { color: c.grid }, border: { display: false }, ticks: { precision: 0 } },
+        x: { grid: { display: false }, border: { color: c.grid } }
+      }
+    }
+  });
+  GolfCRM.chart("hcp-chart", {
+    type: "bar",
+    data: {
+      labels: ["0–10", "10–20", "20–30", "30+"],
+      datasets: [{ label: "Игроков", data: {{ hcp|tojson }}, backgroundColor: c.accent, hoverBackgroundColor: c.series[0],
+                   borderRadius: 4, maxBarThickness: 44 }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: c.grid }, border: { display: false } },
+        x: { grid: { display: false }, border: { color: c.grid }, title: { display: true, text: "Индекс гандикапа" } }
+      }
+    }
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% if q|length >= 2 %}
+{% if results.players or results.clubs or results.tournaments %}
+  {% if results.players %}<div class="group">Игроки</div>{% for m in results.players %}<a href="/players/{{ m.id }}">{{ m.full_name }} <span class="muted small">{{ m.license_number }}</span></a>{% endfor %}{% endif %}
+  {% if results.clubs %}<div class="group">Клубы</div>{% for c in results.clubs %}<a href="/clubs/{{ c.id }}">{{ c.name }}</a>{% endfor %}{% endif %}
+  {% if results.tournaments %}<div class="group">Турниры</div>{% for t in results.tournaments %}<a href="/tournaments/{{ t.id }}">{{ t.name }} <span class="muted small">{{ t.start_date|date }}</span></a>{% endfor %}{% endif %}
+  <a href="/search?q={{ q|urlencode }}" class="small"><strong>Все результаты →</strong></a>
+{% else %}
+  <div class="none">Ничего не найдено по запросу «{{ q }}»</div>
+{% endif %}
+{% endif %}
