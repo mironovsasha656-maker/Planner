@@ -194,9 +194,9 @@ Decisions made where the brief was silent:
 25. **Notifications are in-app only** (no e-mail/SMS). The browser polls every 20 seconds; a toast is shown only for notifications that arrived after the page was first opened in that tab (tracked per user in `sessionStorage`), so old unread items do not flood the screen. Overdue notifications are created lazily on the next poll after the deadline passes.
 26. **"Мои задачи"** groups tasks as Просроченные → В работе → Новые (by due date), with finished and cancelled tasks under a separate «Завершённые» filter. The director's list shows open tasks by default, overdue first.
 27. **Seed tasks** are replayed through the same service functions (so notifications and audit entries are consistent). Notifications older than three days are marked as read.
+28. **Charts:** the dual-axis member chart was replaced by a single-axis line (new members per month are shown in the tooltip) — two scales on one chart are hard to read.
 29. **Forms open in a centered modal.** «+ Новый игрок / турнир / платёж», «+ Добавить» and «Редактировать» load the form into a modal (validation errors stay inside it; on success the page navigates). With Ctrl/⌘-click, or without JavaScript, the same forms open as normal pages. The mailing form stays a page because of its live recipient preview.
 30. **Static files are versioned** (`?v=<file time>`) and served with `Cache-Control: no-cache`, so after an update browsers (Safari especially) never keep the old CSS/JS.
-28. **Charts:** the dual-axis member chart was replaced by a single-axis line (new members per month are shown in the tooltip) — two scales on one chart are hard to read.
 
 ## Project structure
 
